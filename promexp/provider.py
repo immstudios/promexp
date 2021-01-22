@@ -1,15 +1,17 @@
-import logging
-
 class BaseProvider():
     name = "base"
 
-    def __init__(self, parent, settings):
-        self.logger = logging.getLogger("promexp")
-        self.logger.info(f"Initializing {self.name} provider")
+    def __init__(self, parent, settings:dict={}):
+        self.logger = parent.logger
+        self.logger.debug(f"Initializing {self.name} provider")
         self.parent = parent
         self.enabled = settings is not None
-        self.settings = settings or {}
-    
+        if type(settings) == dict:
+            self.settings = settings
+        else:
+            self.logger.warning(f"Incorrect settings for {self.name} provider. Ignoring")
+            self.settings = {}
+
     def __getitem__(self, key):
         return self.settings.get(key, None)
 

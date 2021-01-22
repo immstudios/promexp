@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import collections.abc
 
 class frozendict(collections.abc.Mapping):
@@ -41,6 +39,7 @@ class Metrics():
         self.data = {}
 
     def add(self, name:str, value:float, **tags) -> bool:
+        """Add a metric to the pool"""
         if type(value) not in [int, float]:
             return False
         key = (name, frozendict(**tags))
@@ -48,7 +47,7 @@ class Metrics():
         return True
 
     def dump(self):
-        """Returns json-serializable list of the stored metrics"""
+        """Returns json-serializable list of the stored metrics pool"""
         return [[*key, value] for key, value in self.data.items()]
 
     def load(self, data):
@@ -67,10 +66,3 @@ class Metrics():
             result += f"{prefix}{name}{{{tstring}}} {value}\n"
         return result
 
-
-if __name__ == "__main__":
-    m = Metrics()
-    m.add("test1", 1, a=0, b=1)
-    m.add("test2", 2, a=0, b=1)
-    m.add("test2", 3, b=1, a=0)
-    m.render("prefix")

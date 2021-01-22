@@ -4,8 +4,8 @@ from .storage import StorageProvider
 from .network import NetworkProvider
 
 registry = [
-    PSUtilProvider, 
-    NVIDIAProvider, 
+    PSUtilProvider,
+    NVIDIAProvider,
     StorageProvider,
     NetworkProvider
 ]
