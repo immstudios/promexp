@@ -22,7 +22,7 @@ class NVIDIAProvider(BaseProvider):
 
         for f in smi_paths:
             if os.path.exists(f):
-                self.logger.info("nvidia-smi detected. GPU metrics available.")
+                self.logger.info("nvidia-smi found. NVidia GPU metrics available.")
                 self.smi_path = f
                 break
         else:
@@ -30,6 +30,8 @@ class NVIDIAProvider(BaseProvider):
 
 
     def collect(self):
+        #TODO: This method should be refactored
+
         request_modes = self.get("request_modes", ["utilization"])
 
         try:
@@ -75,4 +77,11 @@ class NVIDIAProvider(BaseProvider):
         if gpu_id > -1:
             result.append(gpu_stats)
 
-        return result
+        for i, gpu in enumerate(result):
+            metrics = gpu["utilization"]
+            for key in metrics:
+                value = metrics[key]
+                if key == "gpu":
+                    key = "usage"
+                self.add(f"gpu_{key}", value, gpu_id=i)
+
