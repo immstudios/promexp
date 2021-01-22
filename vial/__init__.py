@@ -12,7 +12,7 @@ from .response import VResponse
 
 def format_traceback():
     exc_type, exc_value, tb = sys.exc_info()
-    result = "Traceback:\n\n    " +  "    ".join(traceback.format_exception(exc_type, exc_value, tb)[1:]))
+    result = "Traceback:\n\n    " +  "    ".join(traceback.format_exception(exc_type, exc_value, tb)[1:])
     return result
 
 
@@ -52,7 +52,7 @@ class Vial():
         else:
             yield body
 
-    def handle(self, request:VRequest) -> Vresponse:
+    def handle(self, request:VRequest):
         return self.response.text("Vial.handle is not implemented", 501)
 
     def serve(self, host:str="", port:int=8080):
