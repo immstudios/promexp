@@ -30,7 +30,7 @@ class VResponse():
             body = f"{r} {status}: {HTTPStatus(status).description}"
         body = body.encode("utf-8")
         headers = {"Content-Type" : "text/txt"}
-        return body, headers 
+        return body, headers
 
     @response_type
     def json(self, body, status):

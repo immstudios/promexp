@@ -47,7 +47,7 @@ class VRequest():
     @property
     def query_string(self):
         return self.environ["QUERY_STRING"]
-    
+
     @property
     def query(self):
         if not hasattr(self, "_query"):
@@ -64,7 +64,7 @@ class VRequest():
     @property
     def host(self):
         return self.environ["HTTP_HOST"]
-    
+
     @property
     def connection(self):
         return self.environ.get("HTTP_CONNECTION")
@@ -76,7 +76,7 @@ class VRequest():
     @property
     def user_agent(self):
         return self.environ.get("HTTP_USER_AGENT")
-        
+
     @property
     def accept(self):
         return self.environ["HTTP_ACCEPT"]
