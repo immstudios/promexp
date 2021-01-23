@@ -3,7 +3,18 @@ __all__ = ["NVIDIAProvider"]
 import os
 import subprocess
 
+from xml.etree import ElementTree as ET
+
+
 from ..provider import BaseProvider
+
+
+def parse_percent(string):
+    try:
+        return float(string.split(" ")[0])
+    except ValueError:
+        return 0
+
 
 class NVIDIAProvider(BaseProvider):
     name = "nvidia"
@@ -30,58 +41,39 @@ class NVIDIAProvider(BaseProvider):
 
 
     def collect(self):
-        #TODO: This method should be refactored
-
-        request_modes = self.get("request_modes", ["utilization"])
+        try:
+            rawdata = subprocess.check_output([self.smi_path, "-q", "-x"])
+        except Exception:
+            self.logger.error("Unable to execute nvidia-smi")
+            return
+        rawdata = rawdata.decode("utf-8")
 
         try:
-            rawdata = subprocess.check_output([self.smi_path, "-q", "-d", "utilization"])
+            xml = ET.XML(rawdata)
         except Exception:
+            self.logger.error("Unable to parse nvidia-smi output")
             return
 
-        rawdata = rawdata.decode("utf-8")
-        modes = [
-                ["Utilization",  "utilization"],
-                ["GPU Utilization Samples", "gpu-samples"],
-                ["Memory Utilization Samples", "mem-samples"],
-                ["ENC Utilization Samples", "enc-samples"],
-                ["DEC Utilization Samples", "dec-samples"],
-            ]
-        result = []
-        gpu_id = -1
-        current_mode = False
-        gpu_stats = {}
-        for line in rawdata.split("\n"):
-            if line.startswith("GPU"):
-                if gpu_id > -1:
-                    result.append(gpu_stats)
+        for i, gpu in enumerate(xml.findall("gpu")):
 
-                gpu_stats = {"id" : line.split(" ")[1].strip()}
-                gpu_id += 1
-            for m, mslug in modes:
-                if line.startswith((" "*4) + m):
-                    current_mode = mslug
-                    break
+            tags = {
+                "id" : i,
+                "model" : gpu.find("product_name").text
+            }
 
-            if current_mode in request_modes and line.startswith(" "*8):
-                key, value = line.strip().split(":")
-                key = key.strip()
-                try:
-                    value = float(value.strip().split(" ")[0])
-                except:
-                    value = 0
-                if current_mode not in gpu_stats:
-                    gpu_stats[current_mode] = {}
-                gpu_stats[current_mode][key.lower()] =  value
+            utilization = gpu.find("utilization")
+            temperature = gpu.find("temperature")
+            power = gpu.find("power_readings")
 
-        if gpu_id > -1:
-            result.append(gpu_stats)
+            self.add("gpu_usage", parse_percent(utilization.find("gpu_util").text), **tags)
+            self.add("gpu_memory", parse_percent(utilization.find("memory_util").text), **tags)
+            self.add("gpu_encoder", parse_percent(utilization.find("encoder_util").text), **tags)
+            self.add("gpu_decoder", parse_percent(utilization.find("decoder_util").text), **tags)
 
-        for i, gpu in enumerate(result):
-            metrics = gpu["utilization"]
-            for key in metrics:
-                value = metrics[key]
-                if key == "gpu":
-                    key = "usage"
-                self.add(f"gpu_{key}", value, gpu_id=i)
+            self.add("gpu_fan_speed", parse_percent(gpu.find("fan_speed").text), **tags)
+            self.add("gpu_temperature", parse_percent(temperature.find("gpu_temp").text), **tags)
+            self.add("gpu_power_draw", parse_percent(power.find("power_draw").text), **tags)
+
+
+
 
