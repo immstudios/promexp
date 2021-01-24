@@ -4,7 +4,7 @@ from .metrics import Metrics
 from .providers import registry
 
 class Promexp():
-    def __init__(self, prefix="", logger=None, tags={}, provider_settings={}):
+    def __init__(self, prefix="", tags={}, provider_settings={}, logger=None):
         self.prefix = prefix
         self.tags = tags
         self.providers = []

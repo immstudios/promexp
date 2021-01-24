@@ -73,7 +73,3 @@ class NVIDIAProvider(BaseProvider):
             self.add("gpu_fan_speed", parse_percent(gpu.find("fan_speed").text), **tags)
             self.add("gpu_temperature", parse_percent(temperature.find("gpu_temp").text), **tags)
             self.add("gpu_power_draw", parse_percent(power.find("power_draw").text), **tags)
-
-
-
-

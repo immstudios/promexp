@@ -1,11 +1,11 @@
 class BaseProvider():
     name = "base"
 
-    def __init__(self, parent, settings:dict={}):
-        self.logger = parent.logger
-        self.logger.debug(f"Initializing {self.name} provider")
+    def __init__(self, parent, settings):
         self.parent = parent
+        self.logger = parent.logger
         self.enabled = settings is not None
+        self.logger.debug(f"Initializing {self.name} provider")
         if type(settings) == dict:
             self.settings = settings
         else:

@@ -12,26 +12,31 @@ from nxtools import logging
 settings = {
     "host" : "",
     "port" : 9731,
-    "tags" : {
-        "hostname" : socket.gethostname()
-    },
+    "hostname" : True,
+    "tags" : {},
     "prefix" : "nebula",
-    "providers" : {
-    }
+    "providers" : {}
 }
 
 logging.show_time = True
 
-if os.path.exists("settings.json"):
+settings_path = "settings.json"
+if os.path.exists(settings_path):
     try:
-        settings.update(json.load(open("settings.json")))
+        settings.update(json.load(open(settings_path)))
     except Exception:
-        print("ERR")
+        logging.error("Unable to parse {settings_path}. Using defaults.")
+
+if settings["hostname"] is True:
+    settings["tags"]["hostname"] = socket.gethostname()
+elif type(settings["hostname"]) == str:
+    settings["tags"]["hostname"] = settings["hostname"]
 
 promexp = Promexp(
-        prefix=settings["prefix"],
-        tags=settings["tags"],
-        logger=logging
+    prefix=settings["prefix"],
+    tags=settings["tags"],
+    provider_settings=settings["provider_settings"],
+    logger=logging,
 )
 
 class Server(Vial):
@@ -39,7 +44,6 @@ class Server(Vial):
         if request.method == "GET" and request.path == "/metrics":
             return self.response.text(promexp.render())
         return self.response.text(f"Use /metrics GET request", status=400)
-
 
 if __name__ == "__main__":
     server = Server("promexp", logger=logging)
