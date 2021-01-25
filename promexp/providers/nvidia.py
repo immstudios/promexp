@@ -9,7 +9,7 @@ from xml.etree import ElementTree as ET
 from ..provider import BaseProvider
 
 
-def parse_percent(string):
+def parse_number(string):
     try:
         return float(string.split(" ")[0])
     except ValueError:
@@ -65,11 +65,11 @@ class NVIDIAProvider(BaseProvider):
             temperature = gpu.find("temperature")
             power = gpu.find("power_readings")
 
-            self.add("gpu_usage", parse_percent(utilization.find("gpu_util").text), **tags)
-            self.add("gpu_memory", parse_percent(utilization.find("memory_util").text), **tags)
-            self.add("gpu_encoder", parse_percent(utilization.find("encoder_util").text), **tags)
-            self.add("gpu_decoder", parse_percent(utilization.find("decoder_util").text), **tags)
+            self.add("gpu_usage", parse_number(utilization.find("gpu_util").text), **tags)
+            self.add("gpu_memory", parse_number(utilization.find("memory_util").text), **tags)
+            self.add("gpu_encoder", parse_number(utilization.find("encoder_util").text), **tags)
+            self.add("gpu_decoder", parse_number(utilization.find("decoder_util").text), **tags)
 
-            self.add("gpu_fan_speed", parse_percent(gpu.find("fan_speed").text), **tags)
-            self.add("gpu_temperature", parse_percent(temperature.find("gpu_temp").text), **tags)
-            self.add("gpu_power_draw", parse_percent(power.find("power_draw").text), **tags)
+            self.add("gpu_fan_speed", parse_number(gpu.find("fan_speed").text), **tags)
+            self.add("gpu_temperature", parse_number(temperature.find("gpu_temp").text), **tags)
+            self.add("gpu_power_draw", parse_number(power.find("power_draw").text), **tags)
