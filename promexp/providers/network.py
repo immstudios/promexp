@@ -5,7 +5,7 @@ import psutil
 from ..provider import BaseProvider
 
 class NetworkProvider(BaseProvider):
-    name = "psutil"
+    name = "network"
 
     def __init__(self, parent, settings):
         super(NetworkProvider, self).__init__(parent, settings)

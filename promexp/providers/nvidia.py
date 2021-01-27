@@ -24,6 +24,7 @@ class NVIDIAProvider(BaseProvider):
 
         smi_paths = [
                 "c:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe",
+                "c:\\Windows\\System32\\nvidia-smi.exe",
                 "/usr/bin/nvidia-smi",
                 "/usr/local/bin/nvidia-smi"
             ]

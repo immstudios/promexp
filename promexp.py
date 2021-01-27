@@ -15,7 +15,7 @@ settings = {
     "hostname" : True,
     "tags" : {},
     "prefix" : "nebula",
-    "providers" : {}
+    "provider_settings" : {}
 }
 
 logging.show_time = True

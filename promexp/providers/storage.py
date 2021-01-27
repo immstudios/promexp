@@ -6,7 +6,7 @@ from ..provider import BaseProvider
 
 
 class StorageProvider(BaseProvider):
-    name = "psutil"
+    name = "storage"
 
     def __init__(self, parent, settings):
         super(StorageProvider, self).__init__(parent, settings)
