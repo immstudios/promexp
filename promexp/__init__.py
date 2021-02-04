@@ -16,6 +16,8 @@ class Promexp():
                     provider_settings.get(pclass.name, {})
                 )
             )
+            if self.providers[-1].enabled:
+                self.logger.info(f"Enabling {self.providers[-1].name} provider")
         self.metrics = Metrics()
 
     @property

@@ -5,7 +5,6 @@ class BaseProvider():
         self.parent = parent
         self.logger = parent.logger
         self.enabled = settings is not None
-        self.logger.debug(f"Initializing {self.name} provider")
         if type(settings) == dict:
             self.settings = settings
         else:

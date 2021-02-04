@@ -34,7 +34,6 @@ class NVIDIAProvider(BaseProvider):
 
         for f in smi_paths:
             if os.path.exists(f):
-                self.logger.info("nvidia-smi found. NVidia GPU metrics available.")
                 self.smi_path = f
                 break
         else:
