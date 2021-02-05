@@ -1,7 +1,9 @@
 __all__ = ["StorageSpacesProvider"]
 
 import os
+import time
 import subprocess
+import threading
 
 from ..provider import BaseProvider
 
@@ -49,6 +51,19 @@ def get_ss_status():
         return result
 
 
+
+class SSWorker(threading.Thread):
+    def run(self):
+        while 1:
+            try:
+                self.result = get_ss_status()
+            except Exception:
+                self.logger.error("Unable to get storage spaces status")
+            else:
+                self.logger.debug("Got ss status")
+            time.sleep(30)
+
+
 class StorageSpacesProvider(BaseProvider):
     name = "storagespaces"
 
@@ -67,10 +82,13 @@ class StorageSpacesProvider(BaseProvider):
         if not status:
             self.disable()
 
+        self.worker = SSWorker()
+        self.worker.logger = self.logger
+        self.worker.start()
 
     def collect(self):
         try:
-            status = get_ss_status()
+            status = self.worker.result
         except Exception:
             status = []
 
