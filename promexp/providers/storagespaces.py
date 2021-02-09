@@ -16,7 +16,7 @@ def get_ss_status():
         stderr=subprocess.PIPE, 
         stdout=subprocess.PIPE
     )
-    stdout, stderr = c.communicate()
+    stdout, _ = c.communicate()
 
     bounds = False
     result = []
@@ -59,8 +59,7 @@ class SSWorker(threading.Thread):
                 self.result = get_ss_status()
             except Exception:
                 self.logger.error("Unable to get storage spaces status")
-            else:
-                self.logger.debug("Got ss status")
+
             time.sleep(30)
 
 
@@ -91,7 +90,6 @@ class StorageSpacesProvider(BaseProvider):
             status = self.worker.result
         except Exception:
             status = []
-
 
         for sspace in status:
             tags = {

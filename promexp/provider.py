@@ -23,8 +23,8 @@ class BaseProvider():
     def enable(self):
         self.enabled = True
 
-    def add(self, name, value, **tags):
-        self.parent.metrics.add(name, value, **tags)
+    def add(self, metric_name, value, **tags):
+        self.parent.metrics.add(metric_name, value, **tags)
 
     def collect(self):
         pass

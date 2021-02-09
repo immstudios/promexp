@@ -56,7 +56,6 @@ class CasparChannel():
 
     @property
     def peak_volume(self):
-        print("vol reset")
         v = self._volume
         self._volume = 0
         return v
@@ -147,5 +146,6 @@ class CasparCGProvider(BaseProvider):
         self.add("casparcg_idle_seconds", time.time() - self.osc.last_message, **tags)
 
         for id_channel, channel in self.osc.channels.items():
-            self.add("casparcg_peak_volume", channel.peak_volume)
-            self.add("casparcg_dropped_total", channel.dropped_frames)
+            tags = {"channel" : id_channel}
+            self.add("casparcg_peak_volume", channel.peak_volume, **tags)
+            self.add("casparcg_dropped_total", channel.dropped_frames, **tags)
