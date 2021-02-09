@@ -61,12 +61,16 @@ class CasparChannel():
         self._volume = 0
         return v
 
+    @property
+    def dropped_frames(self):
+        return 0
+
 
 class CasparOSCServer():
     def __init__(self, osc_port=6250):
         self.osc_port = osc_port
         self.channels = {}
-        self.last_osc = time.time()
+        self.last_message = time.time()
         self.osc_server = OSCServer("", self.osc_port, self.handle_osc)
         self.osc_thread = threading.Thread(target=self.osc_server.serve_forever, args=())
         self.osc_thread.name = 'OSC Server'
@@ -91,7 +95,7 @@ class CasparOSCServer():
             self.channels[channel] = CasparChannel()
         self.channels[channel].handle_osc(address[3:], *args)
 
-        self.last_osc = time.time()
+        self.last_message = time.time()
 
 
 
@@ -101,10 +105,9 @@ class CasparCGHeartbeat(threading.Thread):
         while 1:
             response = self.parent.query("VERSION")
             if not response:
-                print("HB FAILED")
                 self.parent.caspar.disconnect() 
             else:
-                print("HB OK")
+                pass
             time.sleep(10)
 
 
@@ -113,13 +116,13 @@ class CasparCGProvider(BaseProvider):
 
     def __init__(self, parent, settings):
         super(CasparCGProvider, self).__init__(parent, settings)
-        self.host = settings.get("host", "192.168.5.23")
+        self.host = settings.get("host", "127.0.0.1")
         self.port = settings.get("port", 5250)
         self.osc_port = settings.get("osc_port", 6250)
 
         self.caspar = CasparCG(self.host, self.port, timeout=.5)
 
-        response = self.caspar.query("VERSION")
+        response = self.query("VERSION")
 
         if not response and settings.get("force", False):
             self.disable()
@@ -131,12 +134,18 @@ class CasparCGProvider(BaseProvider):
         self.heartbeat.parent = self
         self.heartbeat.start()
         
+    def query(self, q):
+        result = self.caspar.query(q, verbose=False)
+        if result:
+            self.enable()
+        return result
+
 
     def collect(self):
         tags = {}
         self.add("casparcg_connected", int(self.caspar.is_connected), **tags)
+        self.add("casparcg_idle_seconds", time.time() - self.osc.last_message, **tags)
 
         for id_channel, channel in self.osc.channels.items():
             self.add("casparcg_peak_volume", channel.peak_volume)
-
-
+            self.add("casparcg_dropped_total", channel.dropped_frames)

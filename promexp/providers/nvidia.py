@@ -4,8 +4,6 @@ import os
 import subprocess
 
 from xml.etree import ElementTree as ET
-
-
 from ..provider import BaseProvider
 
 
@@ -69,7 +67,6 @@ class NVIDIAProvider(BaseProvider):
             self.add("gpu_memory", parse_number(utilization.find("memory_util").text), **tags)
             self.add("gpu_encoder", parse_number(utilization.find("encoder_util").text), **tags)
             self.add("gpu_decoder", parse_number(utilization.find("decoder_util").text), **tags)
-
             self.add("gpu_fan_speed", parse_number(gpu.find("fan_speed").text), **tags)
             self.add("gpu_temperature", parse_number(temperature.find("gpu_temp").text), **tags)
             self.add("gpu_power_draw", parse_number(power.find("power_draw").text), **tags)

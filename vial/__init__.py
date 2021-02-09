@@ -1,6 +1,8 @@
 __all__ = ["Vial"]
 
+import os
 import sys
+import signal
 import inspect
 import logging
 import traceback
@@ -42,8 +44,11 @@ class Vial():
         try:
             status, headers, body = self.handle(request)
         except Exception:
-            self.logger.error(f"Unhandled exception ({exc_value}))")
-            self.logger.debug(format_traceback())
+            if hasattr(self.logger, "log_traceback"):
+                self.logger.log_traceback()
+            else:
+                self.logger.error(f"Unhandled exception")
+                self.logger.debug(format_traceback())
             status, headers, body = self.response.text("Internal server error", 500)
 
         respond(status, headers)
@@ -71,3 +76,8 @@ class Vial():
             print()
             self.logger.info("Keyboard interrupt. Shutting down...")
             server.server_close()
+        # Ensure all child threads are terminated as well
+        if os.name == "nt":
+            os.kill(os.getpid(), signal.CTRL_BREAK_EVENT)
+        else:
+            os.kill(os.getpid(), signal.SIGTERM)

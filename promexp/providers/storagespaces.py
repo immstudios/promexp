@@ -95,7 +95,7 @@ class StorageSpacesProvider(BaseProvider):
 
         for sspace in status:
             tags = {
-                "title" : sspace["title"],
+                "name" : sspace["title"],
                 "mode" : sspace["mode"]
             }
             self.add("storage_space_healthy", int(sspace["health"] == "Healthy"), **tags)

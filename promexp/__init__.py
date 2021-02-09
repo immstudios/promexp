@@ -14,6 +14,9 @@ class Promexp():
             self.add_provider(pclass, provider_settings.get(pclass.name, {}))
 
     def add_provider(self, pclass, psettings={}):
+        if psettings is None:
+            return False
+
         if pclass.name in self.providers:
             self.logger.warning(f"Duplicate provider name {pclass.name}. Skipping initialization.")
             return False
