@@ -3,6 +3,7 @@ from .nvidia import NVIDIAProvider
 from .storage import StorageProvider
 from .network import NetworkProvider
 from .storagespaces import StorageSpacesProvider
+from .casparcg import CasparCGProvider
 
 registry = [
     PSUtilProvider,
@@ -10,4 +11,5 @@ registry = [
     StorageProvider,
     NetworkProvider,
     StorageSpacesProvider,
+    CasparCGProvider
 ]
