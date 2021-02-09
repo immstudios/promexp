@@ -38,11 +38,11 @@ class Metrics():
     def __init__(self):
         self.data = {}
 
-    def add(self, name:str, value:float, **tags) -> bool:
+    def add(self, metric_name:str, value:float, **tags) -> bool:
         """Add a metric to the pool"""
         if type(value) not in [int, float]:
             return False
-        key = (name, frozendict(**tags))
+        key = (metric_name, frozendict(**tags))
         self.data[key] = value
         return True
 
