@@ -1,7 +1,7 @@
 # promexp
 
-Promexp is a simplified replacement of Prometheus node exporter, 
-but also provides several metrics useful for the broadcast environment.
+Promexp is a stand-alone service (Windows/Linux), which acts as a simplified replacement of Prometheus node exporter.
+Along with basic system metrics, it provides information useful in a broadcast environment. 
 
 Configuration
 -------------
@@ -111,7 +111,7 @@ Name              | Type  | Unit           | Description
 `gpu_memory`      | gauge | percent        | Current GPU RAM usage
 `gpu_encoder`     | gauge | percent        | Utilization of the nvenc video encoder
 `gpu_decoder`     | gauge | percent        | Utilization of the nvdec video decoder
-`gpu_fan_speed`   | gauge | RPM            | Current fan speed
+`gpu_fan_speed`   | gauge | percent        | Current fan speed
 `gpu_temperature` | gauge | Degree Celsius | GPU core temperature 
 `gpu_power_draw`  | gauge | Watt           | Current power consumption of the card
 
@@ -149,27 +149,30 @@ Name       | Type    | Default       | Description
 `port`     | integer | `5250`        | AMCP port of the target CasparCG instance
 `osc_port` | integer | `6250`        | OSC listening port (server listens on all interfaces)
 `force`    | boolean | `false`       | Do not disable the provider when CasparCG is not available during startup (keep retrying to connect)
+`heartbeat_interval` | float | `10`  | Number of seconds after which the provider sends a heartbeat `VERSION` command
 
 
 #### Exported metrics
 
 Name                    | Type    | Unit    | Description
 ------------------------|---------|---------|-------------
-casparcg_dropped_frames | Counter | none    | A number of dropped frames per channel since theapplication started (counter).
-casparcg_peak_volume    | Gauge   | Percent | Audio peak value per channel since the last request. 
+casparcg_connected      | Gauge   | boolean | Returns `1` when CasparCG connection is estabilished
+casparcg_idle_seconds   | Gauge   | seconds | Time elapsed since last OSC message. Shouldn't be much higher than 1/FPS
+casparcg_dropped_total  | Counter | none    | A number of dropped frames per channel since the application started
+casparcg_peak_volume    | Gauge   | Percent | Audio peak value per channel since the last request
 
 `casparcg_peak_volume` may either help you determine whether the channel playback is stalled 
 (assuming audio should always play, you may check for zero values)
 or to find out there is an audio channel with a posibility of clipping audio (check for 100%).
 
-`casparcg_dropped_frames` is not available for CasparCG &gt;2.2
+`casparcg_dropped_frames` metric is not available with CasparCG &gt;2.2
 
-Building on windows
+Building on Windows
 -------------------
 
 We use Nuitka to build the application. You may as well:
 
- 1. Download and install0 [Python 3.8](https://www.python.org/ftp/python/3.8.7/python-3.8.7-amd64.exe)
+ 1. Download and install [Python 3.8](https://www.python.org/ftp/python/3.8.7/python-3.8.7-amd64.exe) (any version &gt;3.6 should work should work)
  2. When asked, select "install for all users" and "install pip"
  3. Start a terminal (cmd) as an administrator
  4. Run `pip install psutil nuitka nxtools`
@@ -179,7 +182,21 @@ We use Nuitka to build the application. You may as well:
  8. After a while, resulting binary should be located in `promexp.dist`
 
 
-Running as a service
---------------------
+Acknowledgements
+----------------
 
-...
+### Prometheus
+
+Thanks to [Prometheus](https://prometheus.io) developers for their great work!
+
+### psutil
+
+As a system metrics source, [psutil](https://github.com/giampaolo/psutil) module by giampaolo is used.
+
+### python-osc
+
+CasparCG provider uses public domain [python-osc](https://github.com/attwad/python-osc) module by attwad.
+
+### nuitka
+
+Windows binary is built using [nuitka](https://nuitka.net).

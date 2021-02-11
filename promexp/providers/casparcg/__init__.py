@@ -107,7 +107,7 @@ class CasparCGHeartbeat(threading.Thread):
                 self.parent.caspar.disconnect() 
             else:
                 pass
-            time.sleep(10)
+            time.sleep(self.parent.heartbeat_interval)
 
 
 class CasparCGProvider(BaseProvider):
@@ -118,12 +118,13 @@ class CasparCGProvider(BaseProvider):
         self.host = settings.get("host", "127.0.0.1")
         self.port = settings.get("port", 5250)
         self.osc_port = settings.get("osc_port", 6250)
+        self.heartbeat_interval = settings.get("heartbeat_interval", 10)
 
         self.caspar = CasparCG(self.host, self.port, timeout=.5)
 
         response = self.query("VERSION")
 
-        if not response and settings.get("force", False):
+        if (not response) and (not settings.get("force", False)):
             self.disable()
             return
 
