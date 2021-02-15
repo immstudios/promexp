@@ -48,7 +48,7 @@ class Metrics():
 
     def dump(self):
         """Returns json-serializable list of the stored metrics pool"""
-        return [[*key, value] for key, value in self.data.items()]
+        return [[key[0], key[1]._dict, value] for key, value in self.data.items()]
 
     def load(self, data):
         """Loads data from a list created previously using dump method"""

@@ -21,7 +21,7 @@ class Promexp():
             self.logger.warning(f"Duplicate provider name {pclass.name}. Skipping initialization.")
             return False
 
-        self.providers[pclass.name] = pclass(self, psettings) 
+        self.providers[pclass.name] = pclass(self, psettings)
 
         if self.providers[pclass.name].enabled:
             self.logger.info(f"Enabling {pclass.name} provider")
@@ -32,8 +32,11 @@ class Promexp():
             self._logger = logging.getLogger("promexp")
         return self._logger
 
-    def render(self):
+    def collect(self):
         for name, provider in self.providers.items():
             if provider.enabled:
                 provider.collect()
+
+    def render(self):
+        self.collect()
         return self.metrics.render(prefix=self.prefix, **self.tags)
