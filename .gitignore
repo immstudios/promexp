@@ -2,3 +2,5 @@ __pycache__
 promexp.build/
 promexp.dist/
 vial
+__dist__
+promexp.egg-info
