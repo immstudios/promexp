@@ -6,7 +6,7 @@ def read(fname):
 
 setup(
     name = "promexp",
-    version = "1.0.0",
+    version = "1.0.2",
     author = "Martin Wacker",
     author_email = "martas@imm.cz",
     description = "A simple system metrics exporter for Prometheus",

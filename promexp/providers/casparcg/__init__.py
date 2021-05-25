@@ -3,8 +3,10 @@ import math
 import threading
 import fractions
 import telnetlib
+import socket
 
 from nxtools.caspar import CasparCG as NXCaspar
+from nxtools import log_traceback, logging
 
 from .osc_server import OSCServer
 from ...provider import BaseProvider
@@ -12,18 +14,31 @@ from ...provider import BaseProvider
 
 class CasparCG(NXCaspar):
     """CasparCG which fails to connect silently"""
+    verbose = False
 
-    def connect(self):
+    def connect(self, **kwargs):
         """Create connection to CasparCG Server"""
         try:
             self.connection = telnetlib.Telnet(self.host, self.port, timeout=self.timeout)
         except ConnectionRefusedError:
+            if self.verbose:
+                logging.error("CasparCG: Connection refused")
+            return False
+        except socket.timeout:
+            if self.verbose:
+                logging.error("CasparCG: Connection timeout")
             return False
         except Exception:
+            if self.verbose:
+                log_traceback("CasparCG: Unable to connect")
             return False
+        if self.verbose:
+            logging.goodnews("CasparCG: Connected")
         return True
 
     def disconnect(self):
+        if self.connection:
+            logging.warning("CasparCG: Disconnected")
         self.connection = False
 
     @property
@@ -71,9 +86,17 @@ class CasparOSCServer():
         self.channels = {}
         self.last_message = time.time()
         self.osc_server = OSCServer("", self.osc_port, self.handle_osc)
-        self.osc_thread = threading.Thread(target=self.osc_server.serve_forever, args=())
+        self.osc_thread = threading.Thread(target=self.serve, args=())
         self.osc_thread.name = 'OSC Server'
         self.osc_thread.start()
+
+    def serve(self):
+        while 1:
+            try:
+                self.osc_server.serve_forever()
+            except Exception:
+                log_traceback()
+                time.sleep(1)
 
     def __getitem__(self, key):
         return self.channels.get(key, None)
@@ -104,7 +127,7 @@ class CasparCGHeartbeat(threading.Thread):
         while 1:
             response = self.parent.query("VERSION")
             if not response:
-                self.parent.caspar.disconnect() 
+                self.parent.caspar.disconnect()
             else:
                 pass
             time.sleep(self.parent.heartbeat_interval)
@@ -120,11 +143,13 @@ class CasparCGProvider(BaseProvider):
         self.osc_port = settings.get("osc_port", 6250)
         self.heartbeat_interval = settings.get("heartbeat_interval", 10)
 
-        self.caspar = CasparCG(self.host, self.port, timeout=.5)
+
+        self.caspar = CasparCG(self.host, self.port, timeout=2)
+        self.caspar.verbose = settings.get("force")
 
         response = self.query("VERSION")
 
-        if (not response) and (not settings.get("force", False)):
+        if (not response) and (not settings.get("force")):
             self.disable()
             return
 
@@ -133,7 +158,7 @@ class CasparCGProvider(BaseProvider):
         self.heartbeat = CasparCGHeartbeat()
         self.heartbeat.parent = self
         self.heartbeat.start()
-        
+
     def query(self, q):
         result = self.caspar.query(q, verbose=False)
         if result:

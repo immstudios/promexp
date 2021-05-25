@@ -1,6 +1,5 @@
 __pycache__
-promexp.build/
-promexp.dist/
 vial
-__dist__
+dist/
 promexp.egg-info
+settings.json
