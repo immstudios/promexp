@@ -1,4 +1,4 @@
-class BaseProvider():
+class BaseProvider:
     name = "base"
 
     def __init__(self, parent, settings):
@@ -8,7 +8,9 @@ class BaseProvider():
         if type(settings) == dict:
             self.settings = settings
         else:
-            self.logger.warning(f"Incorrect settings for {self.name} provider. Ignoring")
+            self.logger.warning(
+                f"Incorrect settings for {self.name} provider. Ignoring"
+            )
             self.settings = {}
 
     def __getitem__(self, key):
@@ -28,6 +30,3 @@ class BaseProvider():
 
     def collect(self):
         pass
-
-
-

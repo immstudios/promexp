@@ -1,5 +1,6 @@
 import collections.abc
 
+
 class frozendict(collections.abc.Mapping):
     dict_cls = dict
 
@@ -34,11 +35,11 @@ class frozendict(collections.abc.Mapping):
         return self._hash
 
 
-class Metrics():
+class Metrics:
     def __init__(self):
         self.data = {}
 
-    def add(self, metric_name:str, value:float, **tags) -> bool:
+    def add(self, metric_name: str, value: float, **tags) -> bool:
         """Add a metric to the pool"""
         if type(value) not in [int, float]:
             return False
@@ -55,14 +56,15 @@ class Metrics():
         for name, tags, value in data:
             self.add(name, value, **tags)
 
-    def render(self, prefix:str="", **kwargs):
+    def render(self, prefix: str = "", **kwargs):
         """Returns metrics in Prometheus format"""
         if prefix:
             prefix += "_"
         result = ""
         for key, value in self.data.items():
             name, tags = key
-            tstring = ", ".join(f"{k}=\"{v}\"" for k, v in {**tags._dict, **kwargs}.items())
+            tstring = ", ".join(
+                f'{k}="{v}"' for k, v in {**tags._dict, **kwargs}.items()
+            )
             result += f"{prefix}{name}{{{tstring}}} {value}\n"
         return result
-

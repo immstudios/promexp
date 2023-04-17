@@ -3,7 +3,8 @@ import logging
 from .metrics import Metrics
 from .providers import registry
 
-class Promexp():
+
+class Promexp:
     def __init__(self, prefix="", tags={}, provider_settings={}, logger=None):
         self.prefix = prefix
         self.tags = tags
@@ -18,7 +19,9 @@ class Promexp():
             return False
 
         if pclass.name in self.providers:
-            self.logger.warning(f"Duplicate provider name {pclass.name}. Skipping initialization.")
+            self.logger.warning(
+                f"Duplicate provider name {pclass.name}. Skipping initialization."
+            )
             return False
 
         self.providers[pclass.name] = pclass(self, psettings)
@@ -28,7 +31,7 @@ class Promexp():
 
     @property
     def logger(self):
-        if self._logger == None:
+        if self._logger is None:
             self._logger = logging.getLogger("promexp")
         return self._logger
 
