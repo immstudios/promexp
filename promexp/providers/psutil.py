@@ -1,16 +1,24 @@
 __all__ = ["PSUtilProvider"]
 
 import time
+from typing import TYPE_CHECKING, Any
 
 import psutil
 
 from promexp.provider import BaseProvider
 
+if TYPE_CHECKING:
+    from promexp.promexp import Promexp
+
 
 class PSUtilProvider(BaseProvider):
     name = "psutil"
 
-    def __init__(self, parent, settings):
+    def __init__(
+        self,
+        parent: "Promexp",
+        settings: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(parent, settings)
         self.boot_time = psutil.boot_time()
         self.run_time = time.time()

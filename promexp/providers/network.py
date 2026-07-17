@@ -1,14 +1,23 @@
 __all__ = ["NetworkProvider"]
 
+from typing import TYPE_CHECKING, Any
+
 import psutil
 
 from promexp.provider import BaseProvider
+
+if TYPE_CHECKING:
+    from promexp.promexp import Promexp
 
 
 class NetworkProvider(BaseProvider):
     name = "network"
 
-    def __init__(self, parent, settings):
+    def __init__(
+        self,
+        parent: "Promexp",
+        settings: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(parent, settings)
 
         self.interface_blacklist = ["lo"]

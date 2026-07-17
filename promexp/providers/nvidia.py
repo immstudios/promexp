@@ -2,9 +2,13 @@ __all__ = ["NVIDIAProvider"]
 
 import os
 import subprocess
+from typing import TYPE_CHECKING, Any
 from xml.etree import ElementTree as ET
 
 from promexp.provider import BaseProvider
+
+if TYPE_CHECKING:
+    from promexp.promexp import Promexp
 
 
 def parse_number(string):
@@ -17,7 +21,11 @@ def parse_number(string):
 class NVIDIAProvider(BaseProvider):
     name = "nvidia"
 
-    def __init__(self, parent, settings):
+    def __init__(
+        self,
+        parent: "Promexp",
+        settings: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__(parent, settings)
 
         smi_paths = [
