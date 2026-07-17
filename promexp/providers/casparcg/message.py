@@ -73,9 +73,7 @@ class OSCMessage:
                 if param not in "[]":
                     param_stack[-1].append(val)
             if len(param_stack) != 1:
-                raise ParseError(
-                    f"Missing closing bracket in type tag: {type_tag}"
-                )
+                raise ParseError(f"Missing closing bracket in type tag: {type_tag}")
             self._parameters = params
         except OSCParseError as pe:
             raise ParseError("Found incorrect datagram, ignoring it", pe)

@@ -8,7 +8,7 @@ import time
 
 from .bundle import OSCBundle
 from .message import OSCMessage
-from .osc_types import *
+from .osc_types import IMMEDIATELY, OSCParseError
 
 # A namedtuple as returned my the _timed_msg_of_bundle function.
 # 1) the system time at which the message should be executed
@@ -50,19 +50,16 @@ class OSCPacket:
           - ParseError if the datagram could not be parsed.
         """
         now = time.time()
-        try:
-            if OSCBundle.dgram_is_bundle(dgram):
-                self._messages = sorted(
-                    _timed_msg_of_bundle(OSCBundle(dgram), now), key=lambda x: x.time
-                )
-            elif OSCMessage.dgram_is_message(dgram):
-                self._messages = [TimedMessage(now, OscMessage(dgram))]
-            else:
-                raise OSCParseError(
-                    "OSC Packet should at least contain an OscMessage or an OscBundle."
-                )
-        except OSCParseError as pe:
-            raise ParseError(f"Could not parse packet {pe}")
+        if OSCBundle.dgram_is_bundle(dgram):
+            self._messages = sorted(
+                _timed_msg_of_bundle(OSCBundle(dgram), now), key=lambda x: x.time
+            )
+        elif OSCMessage.dgram_is_message(dgram):
+            self._messages = [TimedMessage(now, OSCMessage(dgram))]
+        else:
+            raise OSCParseError(
+                "OSC Packet should at least contain an OscMessage or an OscBundle."
+            )
 
     @property
     def messages(self) -> list[TimedMessage]:

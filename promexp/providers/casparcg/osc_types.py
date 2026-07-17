@@ -59,7 +59,7 @@ def get_string(dgram: bytes, start_index: int) -> tuple[str, int]:
       ParseError if the datagram could not be parsed.
     """
     if start_index < 0:
-        raise ParseError("start_index < 0")
+        raise OSCParseError("start_index < 0")
     offset = 0
     try:
         if (
@@ -77,13 +77,13 @@ def get_string(dgram: bytes, start_index: int) -> tuple[str, int]:
         # Python slices do not raise an IndexError past the last index,
         # do it ourselves.
         if offset > len(dgram[start_index:]):
-            raise ParseError("Datagram is too short")
+            raise OSCParseError("Datagram is too short")
         data_str = dgram[start_index : start_index + offset]
         return data_str.replace(b"\x00", b"").decode("utf-8"), start_index + offset
     except IndexError as ie:
-        raise ParseError(f"Could not parse datagram {ie}")
+        raise OSCParseError(f"Could not parse datagram {ie}")
     except TypeError as te:
-        raise ParseError(f"Could not parse datagram {te}")
+        raise OSCParseError(f"Could not parse datagram {te}")
 
 
 def get_int(dgram: bytes, start_index: int) -> tuple[int, int]:
@@ -97,17 +97,17 @@ def get_int(dgram: bytes, start_index: int) -> tuple[int, int]:
       A tuple containing the integer and the new end index.
 
     Raises:
-      ParseError if the datagram could not be parsed.
+      OSCParseError if the datagram could not be parsed.
     """
     try:
         if len(dgram[start_index:]) < _INT_DGRAM_LEN:
-            raise ParseError("Datagram is too short")
+            raise OSCParseError("Datagram is too short")
         return (
             struct.unpack(">i", dgram[start_index : start_index + _INT_DGRAM_LEN])[0],
             start_index + _INT_DGRAM_LEN,
         )
     except (struct.error, TypeError) as e:
-        raise ParseError(f"Could not parse datagram {e}")
+        raise OSCParseError(f"Could not parse datagram {e}")
 
 
 def get_uint64(dgram: bytes, start_index: int) -> tuple[int, int]:
@@ -121,11 +121,11 @@ def get_uint64(dgram: bytes, start_index: int) -> tuple[int, int]:
       A tuple containing the integer and the new end index.
 
     Raises:
-      ParseError if the datagram could not be parsed.
+      OSCParseError if the datagram could not be parsed.
     """
     try:
         if len(dgram[start_index:]) < _UINT64_DGRAM_LEN:
-            raise ParseError("Datagram is too short")
+            raise OSCParseError("Datagram is too short")
         return (
             struct.unpack(">Q", dgram[start_index : start_index + _UINT64_DGRAM_LEN])[
                 0
@@ -133,7 +133,7 @@ def get_uint64(dgram: bytes, start_index: int) -> tuple[int, int]:
             start_index + _UINT64_DGRAM_LEN,
         )
     except (struct.error, TypeError) as e:
-        raise ParseError(f"Could not parse datagram {e}")
+        raise OSCParseError(f"Could not parse datagram {e}")
 
 
 def get_timetag(dgram: bytes, start_index: int) -> tuple[datetime, int]:
@@ -148,11 +148,11 @@ def get_timetag(dgram: bytes, start_index: int) -> tuple[datetime, int]:
       fraction of the current second and the new end index.
 
     Raises:
-      ParseError if the datagram could not be parsed.
+      OSCParseError if the datagram could not be parsed.
     """
     try:
         if len(dgram[start_index:]) < _TIMETAG_DGRAM_LEN:
-            raise ParseError("Datagram is too short")
+            raise OSCParseError("Datagram is too short")
 
         timetag, _ = get_uint64(dgram, start_index)
         seconds, fraction = ntp.parse_timestamp(timetag)
@@ -166,7 +166,7 @@ def get_timetag(dgram: bytes, start_index: int) -> tuple[datetime, int]:
 
         return (utc, fraction), start_index + _TIMETAG_DGRAM_LEN
     except (struct.error, TypeError) as e:
-        raise ParseError(f"Could not parse datagram {e}")
+        raise OSCParseError(f"Could not parse datagram {e}") from e
 
 
 def get_float(dgram: bytes, start_index: int) -> tuple[float, int]:
@@ -180,7 +180,7 @@ def get_float(dgram: bytes, start_index: int) -> tuple[float, int]:
       A tuple containing the float and the new end index.
 
     Raises:
-      ParseError if the datagram could not be parsed.
+      OSCParseError if the datagram could not be parsed.
     """
     try:
         if len(dgram[start_index:]) < _FLOAT_DGRAM_LEN:
@@ -193,7 +193,7 @@ def get_float(dgram: bytes, start_index: int) -> tuple[float, int]:
             start_index + _FLOAT_DGRAM_LEN,
         )
     except (struct.error, TypeError) as e:
-        raise ParseError(f"Could not parse datagram {e}")
+        raise OSCParseError(f"Could not parse datagram {e}") from e
 
 
 def get_double(dgram: bytes, start_index: int) -> tuple[float, int]:
@@ -207,11 +207,11 @@ def get_double(dgram: bytes, start_index: int) -> tuple[float, int]:
       A tuple containing the double and the new end index.
 
     Raises:
-      ParseError if the datagram could not be parsed.
+      OSCParseError if the datagram could not be parsed.
     """
     try:
         if len(dgram[start_index:]) < _DOUBLE_DGRAM_LEN:
-            raise ParseError("Datagram is too short")
+            raise OSCParseError("Datagram is too short")
         return (
             struct.unpack(">d", dgram[start_index : start_index + _DOUBLE_DGRAM_LEN])[
                 0
@@ -219,7 +219,7 @@ def get_double(dgram: bytes, start_index: int) -> tuple[float, int]:
             start_index + _DOUBLE_DGRAM_LEN,
         )
     except (struct.error, TypeError) as e:
-        raise ParseError(f"Could not parse datagram {e}")
+        raise OSCParseError(f"Could not parse datagram {e}") from e
 
 
 def get_blob(dgram: bytes, start_index: int) -> tuple[bytes, int]:
@@ -238,14 +238,14 @@ def get_blob(dgram: bytes, start_index: int) -> tuple[bytes, int]:
       A tuple containing the blob and the new end index.
 
     Raises:
-      ParseError if the datagram could not be parsed.
+      OSCParseError if the datagram could not be parsed.
     """
     size, int_offset = get_int(dgram, start_index)
     # Make the size a multiple of 32 bits.
     total_size = size + (-size % _BLOB_DGRAM_PAD)
     end_index = int_offset + size
     if end_index - start_index > len(dgram[start_index:]):
-        raise ParseError("Datagram is too short.")
+        raise OSCParseError("Datagram is too short.")
     return dgram[int_offset : int_offset + size], int_offset + total_size
 
 
@@ -266,13 +266,13 @@ def get_date(dgram: bytes, start_index: int) -> tuple[float, int]:
       returns osc_immediately (0) if the corresponding OSC sequence was found.
 
     Raises:
-      ParseError if the datagram could not be parsed.
+      OSCParseError if the datagram could not be parsed.
     """
     # Check for the special case first.
     if dgram[start_index : start_index + _TIMETAG_DGRAM_LEN] == ntp.IMMEDIATELY:
         return IMMEDIATELY, start_index + _TIMETAG_DGRAM_LEN
     if len(dgram[start_index:]) < _TIMETAG_DGRAM_LEN:
-        raise ParseError("Datagram is too short")
+        raise OSCParseError("Datagram is too short")
     timetag, start_index = get_uint64(dgram, start_index)
     seconds = timetag * ntp._NTP_TIMESTAMP_TO_SECONDS
     return ntp.ntp_time_to_system_epoch(seconds), start_index
@@ -289,17 +289,17 @@ def get_rgba(dgram: bytes, start_index: int) -> tuple[bytes, int]:
       A tuple containing the integer and the new end index.
 
     Raises:
-      ParseError if the datagram could not be parsed.
+      OSCParseError if the datagram could not be parsed.
     """
     try:
         if len(dgram[start_index:]) < _INT_DGRAM_LEN:
-            raise ParseError("Datagram is too short")
+            raise OSCParseError("Datagram is too short")
         return (
             struct.unpack(">I", dgram[start_index : start_index + _INT_DGRAM_LEN])[0],
             start_index + _INT_DGRAM_LEN,
         )
     except (struct.error, TypeError) as e:
-        raise ParseError(f"Could not parse datagram {e}")
+        raise OSCParseError(f"Could not parse datagram {e}") from e
 
 
 def get_midi(dgram: bytes, start_index: int) -> tuple[tuple[int, int, int, int], int]:
@@ -313,13 +313,13 @@ def get_midi(dgram: bytes, start_index: int) -> tuple[tuple[int, int, int, int],
       A tuple containing the MIDI message and the new end index.
 
     Raises:
-      ParseError if the datagram could not be parsed.
+      OSCParseError if the datagram could not be parsed.
     """
     try:
         if len(dgram[start_index:]) < _INT_DGRAM_LEN:
-            raise ParseError("Datagram is too short")
+            raise OSCParseError("Datagram is too short")
         val = struct.unpack(">I", dgram[start_index : start_index + _INT_DGRAM_LEN])[0]
         midi_msg = tuple((val & 0xFF << 8 * i) >> 8 * i for i in range(3, -1, -1))
         return (midi_msg, start_index + _INT_DGRAM_LEN)
     except (struct.error, TypeError) as e:
-        raise ParseError(f"Could not parse datagram {e}")
+        raise OSCParseError(f"Could not parse datagram {e}") from e

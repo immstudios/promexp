@@ -301,7 +301,6 @@ def main(
     elif hostname:
         tags["hostname"] = str(hostname)
 
-
     # Initialize promexp
     promexp = Promexp(
         prefix=settings_dict["prefix"],

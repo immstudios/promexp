@@ -4,7 +4,7 @@ from collections.abc import Iterator
 from typing import Any
 
 from .message import OSCMessage
-from .osc_types import *
+from .osc_types import OSCParseError, get_date, get_int
 
 _BUNDLE_PREFIX = b"#bundle\x00"
 
@@ -27,15 +27,10 @@ class OSCBundle:
         # Interesting stuff starts after the initial b"#bundle\x00".
         self._dgram = dgram
         index = len(_BUNDLE_PREFIX)
-        try:
-            self._timestamp, index = get_date(self._dgram, index)
-        except OSCParseError as pe:
-            raise ParseError(f"Could not get the date from the datagram: {pe}")
+        self._timestamp, index = get_date(self._dgram, index)
         # Get the contents as a list of OscBundle and OscMessage.
         self._contents = self._parse_contents(index)
 
-    # Return type is actually List[OscBundle], but that would require import annotations from __future__, which is
-    # python 3.7+ only.
     def _parse_contents(self, index: int) -> Any:
         contents = []
 
@@ -56,8 +51,8 @@ class OSCBundle:
                     contents.append(OSCBundle(content_dgram))
                 elif OSCMessage.dgram_is_message(content_dgram):
                     contents.append(OSCMessage(content_dgram))
-        except (OSCParseError, IndexError) as e:
-            raise ParseError(f"Could not parse a content datagram: {e}")
+        except IndexError as e:
+            raise OSCParseError(f"Could not parse a content datagram: {e}") from e
 
         return contents
 
@@ -67,7 +62,7 @@ class OSCBundle:
         return dgram.startswith(_BUNDLE_PREFIX)
 
     @property
-    def timestamp(self) -> int:
+    def timestamp(self) -> float:
         """Returns the timestamp associated with this bundle."""
         return self._timestamp
 

@@ -31,9 +31,9 @@ class StorageProvider(BaseProvider):
 
             if mountpoint_whitelist and not any(
                 storage.mountpoint == b
-                    if b == "/"
-                    else storage.mountpoint.lower().startswith(b.lower())
-                    for b in mountpoint_whitelist
+                if b == "/"
+                else storage.mountpoint.lower().startswith(b.lower())
+                for b in mountpoint_whitelist
             ):
                 continue
 
