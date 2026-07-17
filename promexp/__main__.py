@@ -6,8 +6,8 @@ from typing import Annotated, Any
 
 import typer
 
-from promexp import Promexp
-from promexp.logger import logger as logging
+from promexp.logger import logger
+from promexp.promexp import Promexp
 
 
 def str_to_bool(value: Any) -> bool:
@@ -55,34 +55,13 @@ def parse_tags_option(val):
     return parsed
 
 
-def merge_settings(base, override):
-    if not override:
-        return
-    for k, v in override.items():
-        if k == "provider_settings" and isinstance(v, dict):
-            if "provider_settings" not in base:
-                base["provider_settings"] = {}
-            for pk, pv in v.items():
-                if pk not in base["provider_settings"]:
-                    base["provider_settings"][pk] = {}
-                if isinstance(pv, dict) and isinstance(
-                    base["provider_settings"][pk], dict
-                ):
-                    base["provider_settings"][pk].update(pv)
-                else:
-                    base["provider_settings"][pk] = pv
-        elif k == "tags" and isinstance(v, dict):
-            if "tags" not in base:
-                base["tags"] = {}
-            base["tags"].update(v)
-        else:
-            base[k] = v
-
-
 class MetricsHandler(http.server.BaseHTTPRequestHandler):
     promexp: Promexp | None = None
 
-    def do_GET(self):
+    def log_message(self, msg: str, *args) -> None:
+        logger.debug(f"{msg % args} {self.client_address[0]}\n")
+
+    def do_GET(self) -> None:
         if self.path == "/metrics":
             if self.promexp:
                 try:
@@ -98,7 +77,7 @@ class MetricsHandler(http.server.BaseHTTPRequestHandler):
                 else:
                     return
 
-            logging.error("Error rendering metrics")
+            logger.error("Error rendering metrics")
             self.send_response(500)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
             self.end_headers()
@@ -111,17 +90,17 @@ class MetricsHandler(http.server.BaseHTTPRequestHandler):
 
 
 class Server:
-    def __init__(self, app_name="promexp", logger=None):
-        self.logger = logger or logging
+    def __init__(self) -> None:
+        pass
 
-    def serve(self, host: str, port: int):
-        self.logger.info(f"Starting HTTP server at {host or '*'}:{port}")
+    def serve(self, host: str, port: int) -> None:
+        logger.info(f"Starting HTTP server at {host or '*'}:{port}")
         server_address = (host, port)
         httpd = http.server.HTTPServer(server_address, MetricsHandler)
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
-            self.logger.info("Keyboard interrupt. Shutting down...")
+            logger.info("Keyboard interrupt. Shutting down...")
             httpd.server_close()
 
 
@@ -223,31 +202,13 @@ def main(
             envvar="PROMEXP_NETWORK_IGNORE_INACTIVE",
         ),
     ] = True,
-):
-    settings_dict = {
-        "host": "",
-        "port": 9731,
-        "hostname": True,
-        "tags": {},
-        "prefix": "nebula",
-        "provider_settings": {
-            "casparcg": {
-                "host": "127.0.0.1",
-                "port": 5250,
-                "osc_port": 6250,
-                "heartbeat_interval": 10,
-                "force": False,
-            }
-        },
-    }
+) -> None:
 
     override = {}
     if listen_address is not None:
         override["host"] = listen_address
     if listen_port is not None:
         override["port"] = listen_port
-    if prefix is not None:
-        override["prefix"] = prefix
     if hostname is not None:
         override["hostname"] = str_to_bool(hostname)
 
@@ -262,6 +223,8 @@ def main(
             prov_settings[name] = {}
         return prov_settings[name]
 
+    # CasparCG specific
+
     if caspar_host:
         caspar_settings = {}
         caspar_settings["host"] = caspar_host
@@ -271,6 +234,7 @@ def main(
         prov_settings["casparcg"] = caspar_settings
 
     # NVIDIA specific
+
     if prov_settings.get("nvidia") is not None:
         nvidia = get_prov("nvidia")
         if nvidia_smi_path is not None:
@@ -290,29 +254,34 @@ def main(
     #     if network_ignore_inactive is not None:
     #         network["ignore_inactive"] = network_ignore_inactive
 
-    if prov_settings:
-        override["provider_settings"] = prov_settings
+    #
+    # Metric tags
+    #
 
     tags = {}
 
-    # Apply hostname configuration
+    # Apply hostname to tags
+
     if hostname is None:
         tags["hostname"] = socket.gethostname()
     elif hostname:
         tags["hostname"] = str(hostname)
 
+    #
     # Initialize promexp
+    #
+
     promexp = Promexp(
-        prefix=settings_dict["prefix"],
+        prefix=prefix,
         tags=tags,
         provider_settings=prov_settings,
-        logger=logging,
     )
 
     # Set promexp on MetricsHandler class
+
     MetricsHandler.promexp = promexp
 
-    server = Server("promexp", logger=logging)
+    server = Server()
     server.serve(listen_address, listen_port)
 
 
