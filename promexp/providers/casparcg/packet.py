@@ -3,31 +3,28 @@
 It lets you access easily to OscMessage and OscBundle instances in the packet.
 """
 
-import time
 import collections
+import time
 
-from typing import Union, List
-
-from .osc_types import *
 from .bundle import OSCBundle
 from .message import OSCMessage
-
+from .osc_types import *
 
 # A namedtuple as returned my the _timed_msg_of_bundle function.
 # 1) the system time at which the message should be executed
 #    in seconds since the epoch.
 # 2) the actual message.
 TimedMessage = collections.namedtuple(
-    typename='TimedMessage',
-    field_names=('time', 'message'))
+    typename="TimedMessage", field_names=("time", "message")
+)
 
 
-def _timed_msg_of_bundle(bundle: OSCBundle, now: float) -> List[TimedMessage]:
+def _timed_msg_of_bundle(bundle: OSCBundle, now: float) -> list[TimedMessage]:
     """Returns messages contained in nested bundles as a list of TimedMessage."""
     msgs = []
     for content in bundle:
         if type(content) is OSCMessage:
-            if (bundle.timestamp == IMMEDIATELY or bundle.timestamp < now):
+            if bundle.timestamp == IMMEDIATELY or bundle.timestamp < now:
                 msgs.append(TimedMessage(now, content))
             else:
                 msgs.append(TimedMessage(bundle.timestamp, content))
@@ -36,8 +33,7 @@ def _timed_msg_of_bundle(bundle: OSCBundle, now: float) -> List[TimedMessage]:
     return msgs
 
 
-
-class OSCPacket(object):
+class OSCPacket:
     """Unit of transmission of the OSC protocol.
 
     Any application that sends OSC Packets is an OSC Client.
@@ -57,17 +53,18 @@ class OSCPacket(object):
         try:
             if OSCBundle.dgram_is_bundle(dgram):
                 self._messages = sorted(
-                    _timed_msg_of_bundle(OSCBundle(dgram), now),
-                    key=lambda x: x.time)
+                    _timed_msg_of_bundle(OSCBundle(dgram), now), key=lambda x: x.time
+                )
             elif OSCMessage.dgram_is_message(dgram):
                 self._messages = [TimedMessage(now, OscMessage(dgram))]
             else:
                 raise OSCParseError(
-                    'OSC Packet should at least contain an OscMessage or an OscBundle.')
-        except (OSCParseError) as pe:
-            raise ParseError(f'Could not parse packet {pe}')
+                    "OSC Packet should at least contain an OscMessage or an OscBundle."
+                )
+        except OSCParseError as pe:
+            raise ParseError(f"Could not parse packet {pe}")
 
     @property
-    def messages(self) -> List[TimedMessage]:
+    def messages(self) -> list[TimedMessage]:
         """Returns asc-time-sorted TimedMessages of the messages in this packet."""
         return self._messages

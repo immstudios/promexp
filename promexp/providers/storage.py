@@ -2,14 +2,14 @@ __all__ = ["StorageProvider"]
 
 import psutil
 
-from ..provider import BaseProvider
+from promexp.provider import BaseProvider
 
 
 class StorageProvider(BaseProvider):
     name = "storage"
 
     def __init__(self, parent, settings):
-        super(StorageProvider, self).__init__(parent, settings)
+        super().__init__(parent, settings)
         mountpoint_blacklist = [
             "/run",
             "/proc",
@@ -25,20 +25,17 @@ class StorageProvider(BaseProvider):
         self.storages = []
         for storage in psutil.disk_partitions(all=True):
             if not all(
-                [not storage.mountpoint.startswith(b) for b in mountpoint_blacklist]
+                not storage.mountpoint.startswith(b) for b in mountpoint_blacklist
             ):
                 continue
 
-            if mountpoint_whitelist:
-                if not any(
-                    [
-                        storage.mountpoint == b
-                        if b == "/"
-                        else storage.mountpoint.lower().startswith(b.lower())
-                        for b in mountpoint_whitelist
-                    ]
-                ):
-                    continue
+            if mountpoint_whitelist and not any(
+                storage.mountpoint == b
+                    if b == "/"
+                    else storage.mountpoint.lower().startswith(b.lower())
+                    for b in mountpoint_whitelist
+            ):
+                continue
 
             self.storages.append(
                 {

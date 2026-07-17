@@ -3,12 +3,13 @@
 __all__ = ["OSCMessage"]
 
 
+from collections.abc import Iterator
+from typing import Any
+
 from .osc_types import *
 
-from typing import List, Iterator, Any
 
-
-class OSCMessage(object):
+class OSCMessage:
     """Representation of a parsed datagram representing an OSC message.
 
     An OSC message consists of an OSC Address Pattern followed by an OSC
@@ -29,16 +30,13 @@ class OSCMessage(object):
 
             # Get the parameters types.
             type_tag, index = get_string(self._dgram, index)
-            if type_tag.startswith(','):
-                type_tag = type_tag[1:]
+            type_tag = type_tag.removeprefix(",")
 
             params = []
             param_stack = [params]
             # Parse each parameter given its type.
             for param in type_tag:
-                if param == "i":  # Integer.
-                    val, index = get_int(self._dgram, index)
-                elif param == "h":  # Integer.
+                if param in {"i", "h"}:  # Integer.
                     val, index = get_int(self._dgram, index)
                 elif param == "f":  # Float.
                     val, index = get_float(self._dgram, index)
@@ -64,19 +62,23 @@ class OSCMessage(object):
                     param_stack.append(array)
                 elif param == "]":  # Array stop.
                     if len(param_stack) < 2:
-                        raise ParseError('Unexpected closing bracket in type tag: {0}'.format(type_tag))
+                        raise ParseError(
+                            f"Unexpected closing bracket in type tag: {type_tag}"
+                        )
                     param_stack.pop()
                 # TODO: Support more exotic types as described in the specification.
                 else:
-                    logging.warning('Unhandled parameter type: {0}'.format(param))
+                    logging.warning(f"Unhandled parameter type: {param}")
                     continue
                 if param not in "[]":
                     param_stack[-1].append(val)
             if len(param_stack) != 1:
-                raise ParseError('Missing closing bracket in type tag: {0}'.format(type_tag))
+                raise ParseError(
+                    f"Missing closing bracket in type tag: {type_tag}"
+                )
             self._parameters = params
         except OSCParseError as pe:
-            raise ParseError('Found incorrect datagram, ignoring it', pe)
+            raise ParseError("Found incorrect datagram, ignoring it", pe)
 
     @property
     def address(self) -> str:
@@ -86,7 +88,7 @@ class OSCMessage(object):
     @staticmethod
     def dgram_is_message(dgram: bytes) -> bool:
         """Returns whether this datagram starts as an OSC message."""
-        return dgram.startswith(b'/')
+        return dgram.startswith(b"/")
 
     @property
     def size(self) -> int:
@@ -99,7 +101,7 @@ class OSCMessage(object):
         return self._dgram
 
     @property
-    def params(self) -> List[Any]:
+    def params(self) -> list[Any]:
         """Convenience method for list(self) to get the list of parameters."""
         return list(self)
 

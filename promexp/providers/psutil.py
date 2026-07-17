@@ -1,15 +1,17 @@
 __all__ = ["PSUtilProvider"]
 
 import time
+
 import psutil
 
-from ..provider import BaseProvider
+from promexp.provider import BaseProvider
+
 
 class PSUtilProvider(BaseProvider):
     name = "psutil"
 
     def __init__(self, parent, settings):
-        super(PSUtilProvider, self).__init__(parent, settings)
+        super().__init__(parent, settings)
         self.boot_time = psutil.boot_time()
         self.run_time = time.time()
 
@@ -29,12 +31,12 @@ class PSUtilProvider(BaseProvider):
         self.add("cpu_usage", cpu)
         self.add("memory_bytes_total", mem.total)
         self.add("memory_bytes_free", mem.available)
-        self.add("memory_usage", 100*((mem.total-mem.available)/mem.total))
+        self.add("memory_usage", 100 * ((mem.total - mem.available) / mem.total))
 
         if swp and swp.total:
             self.add("swap_bytes_total", swp.total)
             self.add("swap_bytes_free", swp.free)
-            self.add("swap_usage", 100*((swp.total-swp.free)/swp.total))
+            self.add("swap_usage", 100 * ((swp.total - swp.free) / swp.total))
 
         if dsk:
             self.add("disk_read_bytes", dsk.read_bytes)

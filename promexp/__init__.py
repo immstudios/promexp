@@ -5,7 +5,11 @@ from .providers import registry
 
 
 class Promexp:
-    def __init__(self, prefix="", tags={}, provider_settings={}, logger=None):
+    def __init__(self, prefix="", tags=None, provider_settings=None, logger=None):
+        if provider_settings is None:
+            provider_settings = {}
+        if tags is None:
+            tags = {}
         self.prefix = prefix
         self.tags = tags
         self.providers = {}
@@ -14,7 +18,9 @@ class Promexp:
         for pclass in registry:
             self.add_provider(pclass, provider_settings.get(pclass.name, {}))
 
-    def add_provider(self, pclass, psettings={}):
+    def add_provider(self, pclass, psettings=None):
+        if psettings is None:
+            psettings = {}
         if psettings is None:
             return False
 
@@ -28,6 +34,7 @@ class Promexp:
 
         if self.providers[pclass.name].enabled:
             self.logger.info(f"Enabling {pclass.name} provider")
+        return None
 
     @property
     def logger(self):
@@ -36,7 +43,7 @@ class Promexp:
         return self._logger
 
     def collect(self):
-        for name, provider in self.providers.items():
+        for provider in self.providers.values():
             if provider.enabled:
                 provider.collect()
 

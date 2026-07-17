@@ -1,16 +1,17 @@
-import time
-import math
-import threading
 import fractions
 import socket
+import threading
+import time
 
-from ...logger import log_traceback, logger as logging
+from promexp.logger import log_traceback, logger
+from promexp.provider import BaseProvider
+
 from .osc_server import OSCServer
-from ...provider import BaseProvider
 
 
 class CasparResponse:
     """Caspar query response object"""
+
     def __init__(self, code: int, data: str):
         self.code = code
         self.data = data
@@ -41,6 +42,7 @@ class CasparResponse:
 
 class CasparCG:
     """CasparCG client object implemented with raw sockets"""
+
     def __init__(self, host: str = "localhost", port: int = 5250, timeout: float = 2):
         self.host = host
         self.port = port
@@ -49,33 +51,35 @@ class CasparCG:
         self.rfile = None
         self.verbose = False
 
-    def connect(self, **kwargs) -> bool:
+    def connect(self) -> bool:
         """Create connection to CasparCG Server"""
         try:
-            self.connection = socket.create_connection((self.host, self.port), timeout=self.timeout)
+            self.connection = socket.create_connection(
+                (self.host, self.port), timeout=self.timeout
+            )
             self.rfile = self.connection.makefile("rb")
         except ConnectionRefusedError:
             if self.verbose:
-                logging.error("CasparCG: Connection refused")
+                logger.error("CasparCG: Connection refused")
             return False
-        except socket.timeout:
+        except TimeoutError:
             if self.verbose:
-                logging.error("CasparCG: Connection timeout")
+                logger.error("CasparCG: Connection timeout")
             return False
         except Exception:
             if self.verbose:
                 log_traceback("CasparCG: Unable to connect")
             return False
-        if self.verbose:
-            logging.goodnews("CasparCG: Connected")
+        logger.info("CasparCG: Connected")
         return True
 
     def disconnect(self):
         if self.connection:
             if self.verbose:
-                logging.warning("CasparCG: Disconnected")
+                logger.warning("CasparCG: Disconnected")
             try:
-                self.rfile.close()
+                if self.rfile:
+                    self.rfile.close()
             except Exception:
                 pass
             try:
@@ -86,20 +90,15 @@ class CasparCG:
         self.rfile = None
 
     @property
-    def is_connected(self):
+    def is_connected(self) -> bool:
         return self.connection is not None
 
-    def query(self, query: str, **kwargs) -> CasparResponse:
+    def query(self, query: str) -> CasparResponse:
         """Send an AMCP command"""
-        if not self.is_connected:
-            if not self.connect(**kwargs):
-                return CasparResponse(500, "Unable to connect CasparCG server")
+        if not self.is_connected and not self.connect():
+            return CasparResponse(500, "Unable to connect CasparCG server")
 
         query = query.strip()
-        if kwargs.get("verbose", self.verbose):
-            if not query.startswith("INFO"):
-                logging.debug(f"Executing AMCP: {query}")
-
         query_bytes = bytes(query.encode("utf-8")) + b"\r\n"
 
         try:
@@ -126,7 +125,7 @@ class CasparCG:
             if code_str == "202":
                 return CasparResponse(202, "No result")
 
-            elif code_str in ["201", "200"]:
+            if code_str in ["201", "200"]:
                 stat = int(code_str)
                 data_line = self.rfile.readline()
                 if not data_line:
@@ -134,7 +133,7 @@ class CasparCG:
                 data_str = data_line.decode("utf-8").strip()
                 return CasparResponse(stat, data_str)
 
-            elif result_str[0] in ["3", "4", "5"]:
+            if result_str[0] in ["3", "4", "5"]:
                 stat = int(code_str)
                 return CasparResponse(stat, result_str)
 
@@ -143,10 +142,8 @@ class CasparCG:
         return CasparResponse(500, f"Unexpected result: {result_str}")
 
 
-
-
-class CasparChannel():
-    def __init__(self):
+class CasparChannel:
+    def __init__(self) -> None:
         self.fps = fractions.Fraction(25, 1)
         self._volume = 0
         self.layers = {}
@@ -155,17 +152,16 @@ class CasparChannel():
         return self.layers.get(key, None)
 
     def handle_osc(self, address, *args):
-        if address[0:2] ==  ["mixer", "audio"]:
+        if address[0:2] == ["mixer", "audio"]:
             if address[2] == "volume":
                 # Caspar 2.3
                 v = (max(args) / 2147483647) * 100
                 self._volume = max(self._volume, v)
                 return
-            elif len(address) == 4 and address[3] == "pFS":
+            if len(address) == 4 and address[3] == "pFS":
                 # Caspar 2.07
                 self._volume = max(self._volume, args[0] * 100)
                 return
-
 
     @property
     def peak_volume(self):
@@ -178,14 +174,14 @@ class CasparChannel():
         return 0
 
 
-class CasparOSCServer():
+class CasparOSCServer:
     def __init__(self, osc_port=6250):
         self.osc_port = osc_port
         self.channels = {}
         self.last_message = time.time()
         self.osc_server = OSCServer("", self.osc_port, self.handle_osc)
         self.osc_thread = threading.Thread(target=self.serve, args=())
-        self.osc_thread.name = 'OSC Server'
+        self.osc_thread.name = "OSC Server"
         self.osc_thread.start()
 
     def serve(self):
@@ -200,7 +196,7 @@ class CasparOSCServer():
         return self.channels.get(key, None)
 
     def handle_osc(self, address, *args):
-        if type(address) == str:
+        if isinstance(address, str):
             address = address.split("/")
         if len(address) < 2:
             return False
@@ -211,13 +207,12 @@ class CasparOSCServer():
         except (KeyError, ValueError):
             return False
 
-        if not channel in self.channels:
+        if channel not in self.channels:
             self.channels[channel] = CasparChannel()
         self.channels[channel].handle_osc(address[3:], *args)
 
         self.last_message = time.time()
-
-
+        return None
 
 
 class CasparCGHeartbeat(threading.Thread):
@@ -235,22 +230,19 @@ class CasparCGProvider(BaseProvider):
     name = "casparcg"
 
     def __init__(self, parent, settings):
-        super(CasparCGProvider, self).__init__(parent, settings)
+        super().__init__(parent, settings)
         self.host = settings.get("host", "127.0.0.1")
         self.port = settings.get("port", 5250)
         self.osc_port = settings.get("osc_port", 6250)
         self.heartbeat_interval = settings.get("heartbeat_interval", 10)
 
-
+        logger.info(f"Connecting to CasparCG server at {self.host}:{self.port}")
         self.caspar = CasparCG(self.host, self.port, timeout=2)
         self.caspar.verbose = settings.get("force")
 
-        response = self.query("VERSION")
+        _ = self.query("VERSION")
 
-        if (not response) and (not settings.get("force")):
-            self.disable()
-            return
-
+        logger.info(f"Starting OSC server on port {self.osc_port}")
         self.osc = CasparOSCServer(self.osc_port)
 
         self.heartbeat = CasparCGHeartbeat()
@@ -258,11 +250,10 @@ class CasparCGProvider(BaseProvider):
         self.heartbeat.start()
 
     def query(self, q):
-        result = self.caspar.query(q, verbose=False)
+        result = self.caspar.query(q)
         if result:
             self.enable()
         return result
-
 
     def collect(self):
         tags = {}
@@ -270,6 +261,6 @@ class CasparCGProvider(BaseProvider):
         self.add("casparcg_idle_seconds", time.time() - self.osc.last_message, **tags)
 
         for id_channel, channel in self.osc.channels.items():
-            tags = {"channel" : id_channel}
+            tags = {"channel": id_channel}
             self.add("casparcg_peak_volume", channel.peak_volume, **tags)
             self.add("casparcg_dropped_total", channel.dropped_frames, **tags)
