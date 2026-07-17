@@ -1,3 +1,0 @@
-nxtools
-psutil
-vial-http
