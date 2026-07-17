@@ -81,9 +81,9 @@ def get_string(dgram: bytes, start_index: int) -> tuple[str, int]:
         data_str = dgram[start_index : start_index + offset]
         return data_str.replace(b"\x00", b"").decode("utf-8"), start_index + offset
     except IndexError as ie:
-        raise OSCParseError(f"Could not parse datagram {ie}")
+        raise OSCParseError(f"Could not parse datagram {ie}") from ie
     except TypeError as te:
-        raise OSCParseError(f"Could not parse datagram {te}")
+        raise OSCParseError(f"Could not parse datagram {te}") from te
 
 
 def get_int(dgram: bytes, start_index: int) -> tuple[int, int]:
@@ -107,7 +107,7 @@ def get_int(dgram: bytes, start_index: int) -> tuple[int, int]:
             start_index + _INT_DGRAM_LEN,
         )
     except (struct.error, TypeError) as e:
-        raise OSCParseError(f"Could not parse datagram {e}")
+        raise OSCParseError(f"Could not parse datagram {e}") from e
 
 
 def get_uint64(dgram: bytes, start_index: int) -> tuple[int, int]:
@@ -133,7 +133,7 @@ def get_uint64(dgram: bytes, start_index: int) -> tuple[int, int]:
             start_index + _UINT64_DGRAM_LEN,
         )
     except (struct.error, TypeError) as e:
-        raise OSCParseError(f"Could not parse datagram {e}")
+        raise OSCParseError(f"Could not parse datagram {e}") from e
 
 
 def get_timetag(dgram: bytes, start_index: int) -> tuple[datetime, int]:

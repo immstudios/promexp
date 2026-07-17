@@ -1,12 +1,15 @@
 import collections.abc
 
 
-class frozendict(collections.abc.Mapping):
+class FrozenDict(collections.abc.Mapping):
     dict_cls = dict
 
     def __init__(self, *args, **kwargs):
         self._dict = self.dict_cls(*args, **kwargs)
         self._hash = None
+
+    def dict(self):
+        return self._dict
 
     def __getitem__(self, key):
         return self._dict[key]
@@ -43,13 +46,13 @@ class Metrics:
         """Add a metric to the pool"""
         if type(value) not in [int, float]:
             return False
-        key = (metric_name, frozendict(**tags))
+        key = (metric_name, FrozenDict(**tags))
         self.data[key] = value
         return True
 
     def dump(self):
         """Returns json-serializable list of the stored metrics pool"""
-        return [[key[0], key[1]._dict, value] for key, value in self.data.items()]
+        return [[key[0], key[1].dict(), value] for key, value in self.data.items()]
 
     def load(self, data):
         """Loads data from a list created previously using dump method"""
@@ -64,7 +67,7 @@ class Metrics:
         for key, value in self.data.items():
             name, tags = key
             tstring = ", ".join(
-                f'{k}="{v}"' for k, v in {**tags._dict, **kwargs}.items()
+                f'{k}="{v}"' for k, v in {**tags.dict(), **kwargs}.items()
             )
             result += f"{prefix}{name}{{{tstring}}} {value}\n"
         return result

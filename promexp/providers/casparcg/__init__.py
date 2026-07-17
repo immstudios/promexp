@@ -216,6 +216,8 @@ class CasparOSCServer:
 
 
 class CasparCGHeartbeat(threading.Thread):
+    parent: "CasparCGProvider"
+
     def run(self):
         while 1:
             response = self.parent.query("VERSION")

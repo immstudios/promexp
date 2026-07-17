@@ -5,7 +5,7 @@ class BaseProvider:
         self.parent = parent
         self.logger = parent.logger
         self.enabled = settings is not None
-        if type(settings) == dict:
+        if isinstance(settings, dict):
             self.settings = settings
         else:
             self.logger.warning(

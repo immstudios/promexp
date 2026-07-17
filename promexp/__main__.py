@@ -82,27 +82,27 @@ def merge_settings(base, override):
 class MetricsHandler(http.server.BaseHTTPRequestHandler):
     promexp: Promexp | None = None
 
-    def log_message(self, format, *args):
-        logging.debug(f"{self.address_string()} - - {format % args}")
-
     def do_GET(self):
         if self.path == "/metrics":
-            try:
-                if self.promexp is None:
-                    raise RuntimeError("Promexp instance not set on MetricsHandler")
-                content = self.promexp.render()
-                encoded = content.encode("utf-8")
-                self.send_response(200)
-                self.send_header("Content-Type", "text/plain; charset=utf-8")
-                self.send_header("Content-Length", str(len(encoded)))
-                self.end_headers()
-                self.wfile.write(encoded)
-            except Exception:
-                logging.error("Error rendering metrics")
-                self.send_response(500)
-                self.send_header("Content-Type", "text/plain; charset=utf-8")
-                self.end_headers()
-                self.wfile.write(b"Internal Server Error")
+            if self.promexp:
+                try:
+                    content = self.promexp.render()
+                    encoded = content.encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/plain; charset=utf-8")
+                    self.send_header("Content-Length", str(len(encoded)))
+                    self.end_headers()
+                    self.wfile.write(encoded)
+                except Exception:
+                    pass
+                else:
+                    return
+
+            logging.error("Error rendering metrics")
+            self.send_response(500)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(b"Internal Server Error")
         else:
             self.send_response(400)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
