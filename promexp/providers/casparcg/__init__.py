@@ -2,24 +2,58 @@ import time
 import math
 import threading
 import fractions
-import telnetlib
 import socket
 
-from nxtools.caspar import CasparCG as NXCaspar
-from nxtools import log_traceback, logging
-
+from ...logger import log_traceback, logger as logging
 from .osc_server import OSCServer
 from ...provider import BaseProvider
 
 
-class CasparCG(NXCaspar):
-    """CasparCG which fails to connect silently"""
-    verbose = False
+class CasparResponse:
+    """Caspar query response object"""
+    def __init__(self, code: int, data: str):
+        self.code = code
+        self.data = data
 
-    def connect(self, **kwargs):
+    @property
+    def response(self) -> int:
+        """AMCP response code"""
+        return self.code
+
+    @property
+    def is_error(self) -> bool:
+        """Returns True if query failed"""
+        return self.code >= 400
+
+    @property
+    def is_success(self) -> bool:
+        """Returns True if query succeeded"""
+        return self.code < 400
+
+    def __repr__(self):
+        if self.is_success:
+            return "<Caspar response: OK>"
+        return f"<CasparResponse: Error {self.code}>"
+
+    def __len__(self):
+        return int(self.is_success)
+
+
+class CasparCG:
+    """CasparCG client object implemented with raw sockets"""
+    def __init__(self, host: str = "localhost", port: int = 5250, timeout: float = 2):
+        self.host = host
+        self.port = port
+        self.timeout = timeout
+        self.connection = None
+        self.rfile = None
+        self.verbose = False
+
+    def connect(self, **kwargs) -> bool:
         """Create connection to CasparCG Server"""
         try:
-            self.connection = telnetlib.Telnet(self.host, self.port, timeout=self.timeout)
+            self.connection = socket.create_connection((self.host, self.port), timeout=self.timeout)
+            self.rfile = self.connection.makefile("rb")
         except ConnectionRefusedError:
             if self.verbose:
                 logging.error("CasparCG: Connection refused")
@@ -38,12 +72,76 @@ class CasparCG(NXCaspar):
 
     def disconnect(self):
         if self.connection:
-            logging.warning("CasparCG: Disconnected")
-        self.connection = False
+            if self.verbose:
+                logging.warning("CasparCG: Disconnected")
+            try:
+                self.rfile.close()
+            except Exception:
+                pass
+            try:
+                self.connection.close()
+            except Exception:
+                pass
+        self.connection = None
+        self.rfile = None
 
     @property
     def is_connected(self):
-        return self.connection != False
+        return self.connection is not None
+
+    def query(self, query: str, **kwargs) -> CasparResponse:
+        """Send an AMCP command"""
+        if not self.is_connected:
+            if not self.connect(**kwargs):
+                return CasparResponse(500, "Unable to connect CasparCG server")
+
+        query = query.strip()
+        if kwargs.get("verbose", self.verbose):
+            if not query.startswith("INFO"):
+                logging.debug(f"Executing AMCP: {query}")
+
+        query_bytes = bytes(query.encode("utf-8")) + b"\r\n"
+
+        try:
+            self.connection.sendall(query_bytes)
+            status_line = self.rfile.readline()
+            if not status_line:
+                raise ConnectionResetError("Connection closed by peer")
+            result = status_line.strip()
+        except ConnectionResetError:
+            self.disconnect()
+            return CasparResponse(500, "Connection reset by peer")
+        except Exception:
+            log_traceback("Query failed")
+            self.disconnect()
+            return CasparResponse(500, "Query failed")
+
+        result_str = result.decode("utf-8")
+
+        if not result_str:
+            return CasparResponse(500, "No result")
+
+        try:
+            code_str = result_str[:3]
+            if code_str == "202":
+                return CasparResponse(202, "No result")
+
+            elif code_str in ["201", "200"]:
+                stat = int(code_str)
+                data_line = self.rfile.readline()
+                if not data_line:
+                    raise ConnectionResetError("Connection closed while reading data")
+                data_str = data_line.decode("utf-8").strip()
+                return CasparResponse(stat, data_str)
+
+            elif result_str[0] in ["3", "4", "5"]:
+                stat = int(code_str)
+                return CasparResponse(stat, result_str)
+
+        except Exception:
+            return CasparResponse(500, f"Malformed result: {result_str}")
+        return CasparResponse(500, f"Unexpected result: {result_str}")
+
 
 
 
