@@ -1,0 +1,9 @@
+[project]
+name = "promexp"
+version = "2.0.0"
+description = "Simple Prometheus metrics exporter for broadcasters"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "psutil>=7.2.2",
+]
