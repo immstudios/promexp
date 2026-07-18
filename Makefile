@@ -1,14 +1,15 @@
-IMAGE_NAME=nebulabroadcast/promexp:latest
+VERSION=$(shell uv run python -m promexp --version)
+IMAGE_NAME=nebulabroadcast/promexp
 
 check:
-	#uv version $(VERSION)
+	uv version $(VERSION)
 	uv run ruff format . 
 	uv run ruff check --fix .
 	uv run mypy .
 
 
 build:
-	docker build -t $(IMAGE_NAME) .
+	docker build -t $(IMAGE_NAME):dev
 
 run: build
 	docker run -it --rm \
@@ -18,3 +19,5 @@ run: build
 
 push: build
 	docker push $(IMAGE_NAME)
+
+
