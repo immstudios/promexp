@@ -1,14 +1,15 @@
 __all__ = ["OSCBundle"]
 
-from .message import OSCMessage
-from .osc_types import *
+from collections.abc import Iterator
+from typing import Any
 
-from typing import Any, Iterator
+from .message import OSCMessage
+from .osc_types import OSCParseError, get_date, get_int
 
 _BUNDLE_PREFIX = b"#bundle\x00"
 
 
-class OSCBundle(object):
+class OSCBundle:
     """Bundles elements that should be triggered at the same time.
 
     An element can be another OscBundle or an OscMessage.
@@ -26,15 +27,10 @@ class OSCBundle(object):
         # Interesting stuff starts after the initial b"#bundle\x00".
         self._dgram = dgram
         index = len(_BUNDLE_PREFIX)
-        try:
-            self._timestamp, index = get_date(self._dgram, index)
-        except OSCParseError as pe:
-            raise ParseError("Could not get the date from the datagram: %s" % pe)
+        self._timestamp, index = get_date(self._dgram, index)
         # Get the contents as a list of OscBundle and OscMessage.
         self._contents = self._parse_contents(index)
 
-    # Return type is actually List[OscBundle], but that would require import annotations from __future__, which is
-    # python 3.7+ only.
     def _parse_contents(self, index: int) -> Any:
         contents = []
 
@@ -47,7 +43,7 @@ class OSCBundle(object):
                 # Get the sub content size.
                 content_size, index = get_int(self._dgram, index)
                 # Get the datagram for the sub content.
-                content_dgram = self._dgram[index:index + content_size]
+                content_dgram = self._dgram[index : index + content_size]
                 # Increment our position index up to the next possible content.
                 index += content_size
                 # Parse the content into an OSC message or bundle.
@@ -55,8 +51,8 @@ class OSCBundle(object):
                     contents.append(OSCBundle(content_dgram))
                 elif OSCMessage.dgram_is_message(content_dgram):
                     contents.append(OSCMessage(content_dgram))
-        except (OSCParseError, IndexError) as e:
-            raise ParseError("Could not parse a content datagram: %s" % e)
+        except IndexError as e:
+            raise OSCParseError(f"Could not parse a content datagram: {e}") from e
 
         return contents
 
@@ -66,7 +62,7 @@ class OSCBundle(object):
         return dgram.startswith(_BUNDLE_PREFIX)
 
     @property
-    def timestamp(self) -> int:
+    def timestamp(self) -> float:
         """Returns the timestamp associated with this bundle."""
         return self._timestamp
 

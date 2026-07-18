@@ -1,15 +1,15 @@
-from .psutil import PSUtilProvider
-from .nvidia import NVIDIAProvider
-from .storage import StorageProvider
-from .network import NetworkProvider
-from .storagespaces import StorageSpacesProvider
+__all__ = ["registry"]
+
 from .casparcg import CasparCGProvider
+from .network import NetworkProvider
+from .nvidia import NVIDIAProvider
+from .psutil import PSUtilProvider
+from .storage import StorageProvider
 
 registry = [
     PSUtilProvider,
     NVIDIAProvider,
     StorageProvider,
     NetworkProvider,
-    StorageSpacesProvider,
-    CasparCGProvider
+    CasparCGProvider,
 ]

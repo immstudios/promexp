@@ -1,17 +1,20 @@
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from promexp.promexp import Promexp
+
+
 class BaseProvider:
     name = "base"
 
-    def __init__(self, parent, settings):
+    def __init__(
+        self,
+        parent: "Promexp",
+        settings: dict[str, Any] | None = None,
+    ) -> None:
         self.parent = parent
-        self.logger = parent.logger
         self.enabled = settings is not None
-        if type(settings) == dict:
-            self.settings = settings
-        else:
-            self.logger.warning(
-                f"Incorrect settings for {self.name} provider. Ignoring"
-            )
-            self.settings = {}
+        self.settings = settings or {}
 
     def __getitem__(self, key):
         return self.settings.get(key, None)
