@@ -181,17 +181,17 @@ def main(
             envvar="PROMEXP_NVIDIA_SMI_PATH",
         ),
     ] = None,
-    storage: Annotated[
-        list[str] | None,
+    storages: Annotated[
+        str | None,
         typer.Option(
-            help="Storage mountpoint whitelist",
+            help="Comma separated storage mountpoint whitelist",
             envvar="PROMEXP_STORAGES",
         ),
     ] = None,
-    network_interface: Annotated[
-        list[str] | None,
+    network_interfaces: Annotated[
+        str | None,
         typer.Option(
-            help="Network interfaces whitelist",
+            help="Comma separated network interfaces whitelist",
             envvar="PROMEXP_NETWORK_INTERFACES",
         ),
     ] = None,
@@ -240,19 +240,32 @@ def main(
         if nvidia_smi_path is not None:
             nvidia["smi_path"] = nvidia_smi_path
 
-    # Storage specific
-    # if prov_settings.get("storage") is not None:
-    # storage = get_prov("storage")
-    # if storages
-    #     storage["storages"] = parse_list_option(storages)
-
     # Network specific
-    # if prov_settings.get("network") is not None:
-    #     network = get_prov("network")
-    #     if network_interfaces:
-    #         network["interfaces"] = parse_list_option(network_interfaces)
-    #     if network_ignore_inactive is not None:
-    #         network["ignore_inactive"] = network_ignore_inactive
+
+    network_settings = {}
+    if isinstance(network_interfaces, str) and network_interfaces:
+        ifaces = network_interfaces.split(",")
+        network_settings["interfaces"] = [
+            iface.strip() for iface in ifaces if iface.strip()
+        ]
+
+    if not network_ignore_inactive:
+        network_settings["ignore_inactive"] = network_ignore_inactive
+    else:
+        network_settings["ignore_inactive"] = True
+
+    prov_settings["network"] = network_settings
+
+
+    # Storage specific
+
+    storage_settings = {}
+    if isinstance(storages, str) and storages:
+        storage_list = storages.split(",")
+        storage_settings["storages"] = [
+            storage.strip() for storage in storage_list if storage.strip()
+        ]
+    prov_settings["storage"] = storage_settings
 
     #
     # Metric tags
