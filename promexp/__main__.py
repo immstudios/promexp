@@ -24,20 +24,15 @@ def str_to_bool(value: Any) -> bool:
     return bool(value)
 
 
-def parse_list_option(val) -> list:
+def parse_list_option(val: str) -> list[str]:
     if not val:
         return []
-    if isinstance(val, str):
-        items = []
-        parts = val.split(",") if "," in val else val.split()
-        for p in parts:
-            p_stripped = p.strip()
-            if p_stripped:
-                items.append(p_stripped)
-        return items
     items = []
-    for item in val:
-        items.extend(parse_list_option(item))
+    parts = val.split(",") if "," in val else val.split()
+    for p in parts:
+        p_stripped = p.strip()
+        if p_stripped:
+            items.append(p_stripped)
     return items
 
 
@@ -231,38 +226,35 @@ def main(
     if parsed_tags:
         override["tags"] = parsed_tags
 
-    prov_settings = {}
+    #
+    # Provider settings
+    #
 
-    def get_prov(name):
-        if name not in prov_settings:
-            prov_settings[name] = {}
-        return prov_settings[name]
+    prov_settings = {}
 
     # CasparCG specific
 
+    caspar_settings = {}
     if caspar_host:
-        caspar_settings = {}
         caspar_settings["host"] = caspar_host
         caspar_settings["port"] = caspar_port
         caspar_settings["osc_port"] = caspar_osc_port
         caspar_settings["heartbeat_interval"] = caspar_heartbeat_interval
-        prov_settings["casparcg"] = caspar_settings
+    prov_settings["casparcg"] = caspar_settings
 
     # NVIDIA specific
 
-    if prov_settings.get("nvidia") is not None:
-        nvidia = get_prov("nvidia")
-        if nvidia_smi_path is not None:
-            nvidia["smi_path"] = nvidia_smi_path
+    nvidia_settings = {}
+    if nvidia_smi_path:
+        nvidia_settings["smi_path"] = nvidia_smi_path
+    prov_settings["nvidia"] = nvidia_settings
 
     # Network specific
 
     network_settings = {}
-    if isinstance(network_interfaces, str) and network_interfaces:
-        ifaces = network_interfaces.split(",")
-        network_settings["interfaces"] = [
-            iface.strip() for iface in ifaces if iface.strip()
-        ]
+    if network_interfaces:
+        ifaces = parse_list_option(network_interfaces)
+        network_settings["interfaces"] = ifaces
 
     if not network_ignore_inactive:
         network_settings["ignore_inactive"] = network_ignore_inactive
@@ -274,11 +266,8 @@ def main(
     # Storage specific
 
     storage_settings = {}
-    if isinstance(storages, str) and storages:
-        storage_list = storages.split(",")
-        storage_settings["storages"] = [
-            storage.strip() for storage in storage_list if storage.strip()
-        ]
+    if storages:
+        storage_settings["storages"] = parse_list_option(storages)
     prov_settings["storage"] = storage_settings
 
     #
