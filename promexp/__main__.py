@@ -2,12 +2,14 @@
 
 import http.server
 import socket
+import sys
 from typing import Annotated, Any
 
 import typer
 
 from promexp.logger import logger
 from promexp.promexp import Promexp
+from promexp.version import __version__
 
 
 def str_to_bool(value: Any) -> bool:
@@ -112,6 +114,14 @@ app = typer.Typer(
 
 @app.command()
 def main(
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            "-v",
+            help="Show version and exit",
+        ),
+    ] = False,
     listen_address: Annotated[
         str,
         typer.Option(
@@ -204,6 +214,11 @@ def main(
     ] = True,
 ) -> None:
 
+    if version:
+        sys.stdout.write(__version__)
+        sys.stdout.flush()
+        sys.exit(0)
+
     override = {}
     if listen_address is not None:
         override["host"] = listen_address
@@ -255,7 +270,6 @@ def main(
         network_settings["ignore_inactive"] = True
 
     prov_settings["network"] = network_settings
-
 
     # Storage specific
 
