@@ -1,64 +1,68 @@
 # promexp
 
-Promexp is a stand-alone service (Windows/Linux), which acts as a simplified replacement of Prometheus node exporter.
+Promexp is a stand-alone service which acts as a simplified replacement of Prometheus node exporter.
 Along with basic system metrics, it provides information useful in a broadcast environment. 
 
 Configuration
 -------------
 
-Most of the features should work out of the box, but you may tweak the settings using a `settings.json`
-file stored in the same directory as the application. All of the variables are optional.
+Most features work out of the box. Configure the exporter with command-line
+arguments or `PROMEXP_*` environment variables or command-line arguments.
 
-```json
-{
-    "host" : "localhost",
-    "port" : 8080,
-    "hostname" : "thismachinehasanothername",
-    "prefix" : "system",
-    "tags" : {
-        "site_name" : "TV1"
-    },
-    "provider_settings" : {}
-}
+Run `python -m promexp --help` to see the available options. For example:
+
+```sh
+python -m promexp \
+  --listen-address 127.0.0.1 \
+  --listen-port 8080 \
+  --prefix system \
+  --hostname exporter-01 \
+  --tag site_name=TV1
+```
+
+The same configuration can be supplied through the environment:
+
+```sh
+PROMEXP_LISTEN_ADDRESS=127.0.0.1 \
+PROMEXP_LISTEN_PORT=8080 \
+PROMEXP_PREFIX=system \
+PROMEXP_HOSTNAME=exporter-01 \
+python -m promexp --tag site_name=TV1
 ```
 
 ### Listening address
 
 By default, the built-in HTTP server listens on all interfaces on port 9731.
-When needed, you may override this using `host` and `port` variables.
+Override this with `--listen-address` / `PROMEXP_LISTEN_ADDRESS` and
+`--listen-port` / `PROMEXP_LISTEN_PORT`.
 
 ### Hostname
 
 The software automatically attaches a `hostname` tag to each published metrics.
-You may disable this behavior by setting the `hostname` variable to `null` or 
-override the machine name by setting it to a string value. 
+Disable this behavior with `--hostname false` or `PROMEXP_HOSTNAME=false`, or
+override the machine name with `--hostname NAME` or `PROMEXP_HOSTNAME=NAME`.
 
 
 ### Prefix
 
 By default, all metric names are prefixed with the string `nebula_`. 
-It is possible to change the prefix by setting the `prefix` to a string value. 
+Change the prefix with `--prefix` or `PROMEXP_PREFIX`.
 A trailing underscore of the prefix is added automatically.
 
 ### Additional tags
 
-Using the `tags` dictionary, you may specify additional tags to be appended to each metric.
-For example to create a server group or specify a client name in a multitenant environment.
+Use `--tag KEY=VALUE` one or more times to append additional tags to each
+metric. For example, this can create a server group or specify a client name in
+a multitenant environment:
+
+```sh
+python -m promexp --tag site_name=TV1 --tag group=playout
+```
 
 Providers
 ---------
 
 Each provider returns a set of metrics. By default, all providers are enabled, when supported on the platform.
-You may explicitly disable a provider by setting its configuration to `null`:
-
-```json
-{
-   "provider_settings" : {
-       "nvidia" : null,
-       "casparcg" : {"host" : "10.0.1.15"}
-   } 
-}
-```
 
 
 ### psutil
@@ -84,7 +88,8 @@ Name                 | Type    | Unit    | Description
 
 Name              | Type    | Default | Description
 ------------------|---------|---------|------------
-`ignore_inactive` | boolean | `true`  | Do not export metrics for interfaces without traffic
+`--network-ignore-inactive` / `PROMEXP_NETWORK_IGNORE_INACTIVE` | boolean | `true` | Do not export metrics for interfaces without traffic
+`--network-interfaces` / `PROMEXP_NETWORK_INTERFACES` | string | all interfaces | Comma-separated interface whitelist
 
 #### Exported metrics
 
@@ -101,7 +106,7 @@ Uses `nvidia-smi` to obtain and return metrics of NVIDIA GPUs
 
 Name       | Type   | Default             | Description
 -----------|--------|---------------------|------------
-`smi_path` | string | `null` (autodetect) | Path to the `nvidia-smi` application binary
+`--nvidia-smi-path` / `PROMEXP_NVIDIA_SMI_PATH` | string | `null` (autodetect) | Path to the `nvidia-smi` application binary
 
 #### Exported metrics
 
@@ -118,6 +123,9 @@ Name              | Type  | Unit           | Description
 ### storage
 
 Returns storage utilization information for each mountpoint/drive.
+
+Configure a comma-separated mountpoint whitelist with `--storages` or
+`PROMEXP_STORAGES`.
 
 #### Exported metrics
 
@@ -145,11 +153,13 @@ storage_space_healthy | gauge | boolean | While `1` indicates nominal status, `0
 
 Name       | Type    | Default       | Description
 -----------|---------|---------------|------------
-`host`     | string  | `"127.0.0.1"` | IP address or a hostname of the target CasparCG instance
-`port`     | integer | `5250`        | AMCP port of the target CasparCG instance
-`osc_port` | integer | `6250`        | OSC listening port (server listens on all interfaces)
-`force`    | boolean | `false`       | Do not disable the provider when CasparCG is not available during startup (keep retrying to connect)
-`heartbeat_interval` | float | `10`  | Number of seconds after which the provider sends a heartbeat `VERSION` command
+`--caspar-host` / `PROMEXP_CASPAR_HOST` | string | `null` | IP address or hostname of the target CasparCG instance
+`--caspar-port` / `PROMEXP_CASPAR_PORT` | integer | `5250` | AMCP port of the target CasparCG instance
+`--caspar-osc-port` / `PROMEXP_CASPAR_OSC_PORT` | integer | `6250` | OSC listening port (server listens on all interfaces)
+`--caspar-heartbeat-interval` / `PROMEXP_CASPAR_HEARTBEAT_INTERVAL` | integer | `10` | Seconds between `VERSION` heartbeat commands
+
+Set `--caspar-host` or `PROMEXP_CASPAR_HOST` to configure the CasparCG provider;
+the remaining CasparCG options are applied only when a host is set.
 
 
 #### Exported metrics
@@ -167,27 +177,9 @@ or to find out there is an audio channel with a posibility of clipping audio (ch
 
 `casparcg_dropped_frames` metric is not available with CasparCG &gt;2.2
 
-Building on Windows
--------------------
-
-We use Nuitka to build the application. You may as well:
-
- 1. Download and install [Python 3.8](https://www.python.org/ftp/python/3.8.7/python-3.8.7-amd64.exe) (any version &gt;3.6 should work should work)
- 2. When asked, select "install for all users" and "install pip"
- 3. Start a terminal (cmd) as an administrator
- 4. Run `pip install psutil nuitka nxtools`
- 5. Install [MinGW](https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/installer/mingw-w64-install.exe/download)
- 6. Create an environment variable called `CC` containing a path to `gcc.exe` binary from the MinGW package 
- 7. Run `build.bat` from the `promexp` directory
- 8. After a while, resulting binary should be located in `promexp.dist`
-
 
 Acknowledgements
 ----------------
-
-### Prometheus
-
-Thanks to [Prometheus](https://prometheus.io) developers for their great work!
 
 ### psutil
 
@@ -196,7 +188,3 @@ As a system metrics source, [psutil](https://github.com/giampaolo/psutil) module
 ### python-osc
 
 CasparCG provider uses public domain [python-osc](https://github.com/attwad/python-osc) module by attwad.
-
-### nuitka
-
-Windows binary is built using [nuitka](https://nuitka.net).
