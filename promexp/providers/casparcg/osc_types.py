@@ -160,7 +160,7 @@ def get_timetag(dgram: bytes, start_index: int) -> tuple[datetime, int]:
         hours, seconds = seconds // 3600, seconds % 3600
         minutes, seconds = seconds // 60, seconds % 60
 
-        utc = datetime.combine(ntp._NTP_EPOCH, datetime.min.time()) + timedelta(
+        utc = datetime.combine(ntp.NTP_EPOCH, datetime.min.time()) + timedelta(
             hours=hours, minutes=minutes, seconds=seconds
         )
 
@@ -274,7 +274,7 @@ def get_date(dgram: bytes, start_index: int) -> tuple[float, int]:
     if len(dgram[start_index:]) < _TIMETAG_DGRAM_LEN:
         raise OSCParseError("Datagram is too short")
     timetag, start_index = get_uint64(dgram, start_index)
-    seconds = timetag * ntp._NTP_TIMESTAMP_TO_SECONDS
+    seconds = timetag * ntp.NTP_TIMESTAMP_TO_SECONDS
     return ntp.ntp_time_to_system_epoch(seconds), start_index
 
 

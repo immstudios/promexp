@@ -6,7 +6,19 @@ __all__ = ["OSCMessage"]
 from collections.abc import Iterator
 from typing import Any
 
-from .osc_types import *
+from promexp.logger import logger
+
+from .osc_types import (
+    OSCParseError,
+    get_blob,
+    get_double,
+    get_float,
+    get_int,
+    get_midi,
+    get_rgba,
+    get_string,
+    get_timetag,
+)
 
 
 class OSCMessage:
@@ -22,61 +34,59 @@ class OSCMessage:
         self._parse_datagram()
 
     def _parse_datagram(self) -> None:
-        try:
-            self._address_regexp, index = get_string(self._dgram, 0)
-            if not self._dgram[index:]:
-                # No params is legit, just return now.
-                return
+        self._address_regexp, index = get_string(self._dgram, 0)
+        if not self._dgram[index:]:
+            # No params is legit, just return now.
+            return
 
-            # Get the parameters types.
-            type_tag, index = get_string(self._dgram, index)
-            type_tag = type_tag.removeprefix(",")
+        # Get the parameters types.
+        type_tag, index = get_string(self._dgram, index)
+        type_tag = type_tag.removeprefix(",")
 
-            params = []
-            param_stack = [params]
-            # Parse each parameter given its type.
-            for param in type_tag:
-                if param in {"i", "h"}:  # Integer.
-                    val, index = get_int(self._dgram, index)
-                elif param == "f":  # Float.
-                    val, index = get_float(self._dgram, index)
-                elif param == "d":  # Double.
-                    val, index = get_double(self._dgram, index)
-                elif param == "s":  # String.
-                    val, index = get_string(self._dgram, index)
-                elif param == "b":  # Blob.
-                    val, index = get_blob(self._dgram, index)
-                elif param == "r":  # RGBA.
-                    val, index = get_rgba(self._dgram, index)
-                elif param == "m":  # MIDI.
-                    val, index = get_midi(self._dgram, index)
-                elif param == "t":  # osc time tag:
-                    val, index = get_timetag(self._dgram, index)
-                elif param == "T":  # True.
-                    val = True
-                elif param == "F":  # False.
-                    val = False
-                elif param == "[":  # Array start.
-                    array = []
-                    param_stack[-1].append(array)
-                    param_stack.append(array)
-                elif param == "]":  # Array stop.
-                    if len(param_stack) < 2:
-                        raise ParseError(
-                            f"Unexpected closing bracket in type tag: {type_tag}"
-                        )
-                    param_stack.pop()
-                # TODO: Support more exotic types as described in the specification.
-                else:
-                    logging.warning(f"Unhandled parameter type: {param}")
-                    continue
-                if param not in "[]":
-                    param_stack[-1].append(val)
-            if len(param_stack) != 1:
-                raise ParseError(f"Missing closing bracket in type tag: {type_tag}")
-            self._parameters = params
-        except OSCParseError as pe:
-            raise ParseError("Found incorrect datagram, ignoring it", pe)
+        params = []
+        param_stack = [params]
+        # Parse each parameter given its type.
+        for param in type_tag:
+            if param in {"i", "h"}:  # Integer.
+                val, index = get_int(self._dgram, index)
+            elif param == "f":  # Float.
+                val, index = get_float(self._dgram, index)
+            elif param == "d":  # Double.
+                val, index = get_double(self._dgram, index)
+            elif param == "s":  # String.
+                val, index = get_string(self._dgram, index)
+            elif param == "b":  # Blob.
+                val, index = get_blob(self._dgram, index)
+            elif param == "r":  # RGBA.
+                val, index = get_rgba(self._dgram, index)
+            elif param == "m":  # MIDI.
+                val, index = get_midi(self._dgram, index)
+            elif param == "t":  # osc time tag:
+                val, index = get_timetag(self._dgram, index)
+            elif param == "T":  # True.
+                val = True
+            elif param == "F":  # False.
+                val = False
+            elif param == "[":  # Array start.
+                array = []
+                param_stack[-1].append(array)
+                param_stack.append(array)
+            elif param == "]":  # Array stop.
+                if len(param_stack) < 2:
+                    raise OSCParseError(
+                        f"Unexpected closing bracket in type tag: {type_tag}"
+                    )
+                param_stack.pop()
+            # TODO: Support more exotic types as described in the specification.
+            else:
+                logger.warning(f"Unhandled parameter type: {param}")
+                continue
+            if param not in "[]":
+                param_stack[-1].append(val)
+        if len(param_stack) != 1:
+            raise OSCParseError(f"Missing closing bracket in type tag: {type_tag}")
+        self._parameters = params
+        raise OSCParseError("Found incorrect datagram, ignoring it")
 
     @property
     def address(self) -> str:

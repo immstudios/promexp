@@ -94,7 +94,7 @@ class CasparCG:
     def is_connected(self) -> bool:
         return self.connection is not None
 
-    def query(self, query: str) -> CasparResponse:  # noqa: C901
+    def query(self, query: str) -> CasparResponse:  # noqa: C901, PLR0911
         """Send an AMCP command"""
         if not self.is_connected and not self.connect():
             return CasparResponse(500, "Unable to connect CasparCG server")

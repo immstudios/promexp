@@ -5,6 +5,7 @@ import subprocess
 from typing import TYPE_CHECKING, Any
 from xml.etree import ElementTree as ET
 
+from promexp.logger import logger
 from promexp.provider import BaseProvider
 
 if TYPE_CHECKING:
@@ -49,14 +50,14 @@ class NVIDIAProvider(BaseProvider):
         try:
             rawdata = subprocess.check_output([self.smi_path, "-q", "-x"])
         except Exception:
-            self.logger.exception("Unable to execute nvidia-smi")
+            logger.exception("Unable to execute nvidia-smi")
             return
         rawdata = rawdata.decode("utf-8")
 
         try:
             xml = ET.XML(rawdata)
         except Exception:
-            self.logger.exception("Unable to parse nvidia-smi output")
+            logger.exception("Unable to parse nvidia-smi output")
             return
 
         for i, gpu in enumerate(xml.findall("gpu")):

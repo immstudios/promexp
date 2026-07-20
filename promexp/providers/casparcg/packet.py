@@ -3,8 +3,8 @@
 It lets you access easily to OscMessage and OscBundle instances in the packet.
 """
 
-import collections
 import time
+from typing import NamedTuple
 
 from .bundle import OSCBundle
 from .message import OSCMessage
@@ -14,9 +14,14 @@ from .osc_types import IMMEDIATELY, OSCParseError
 # 1) the system time at which the message should be executed
 #    in seconds since the epoch.
 # 2) the actual message.
-TimedMessage = collections.namedtuple(
-    typename="TimedMessage", field_names=("time", "message")
-)
+#
+
+
+class TimedMessage(NamedTuple):
+    """A message with its execution time."""
+
+    time: float
+    message: OSCMessage
 
 
 def _timed_msg_of_bundle(bundle: OSCBundle, now: float) -> list[TimedMessage]:
