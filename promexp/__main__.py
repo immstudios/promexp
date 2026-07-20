@@ -7,7 +7,7 @@ from typing import Annotated, Any
 
 import typer
 
-from promexp.logger import logger
+from promexp.logger import log_traceback, logger
 from promexp.promexp import Promexp
 from promexp.version import __version__
 
@@ -70,9 +70,11 @@ class MetricsHandler(http.server.BaseHTTPRequestHandler):
                     self.end_headers()
                     self.wfile.write(encoded)
                 except Exception:
-                    pass
+                    log_traceback()
                 else:
                     return
+            else:
+                logger.error("Promexp instance not initialized")
 
             logger.error("Error rendering metrics")
             self.send_response(500)

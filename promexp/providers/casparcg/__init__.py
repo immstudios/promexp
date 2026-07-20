@@ -2,6 +2,7 @@ import fractions
 import socket
 import threading
 import time
+from typing import Any
 
 from promexp.logger import log_traceback, logger
 from promexp.provider import BaseProvider
@@ -231,16 +232,33 @@ class CasparCGHeartbeat(threading.Thread):
 class CasparCGProvider(BaseProvider):
     name = "casparcg"
 
-    def __init__(self, parent, settings):
+    host: str | None = None
+    port: int = 5250
+    osc_port: int = 6250
+    heartbeat_interval: int = 10
+
+    def __init__(self, parent, settings: dict[str, Any] | None = None):
         super().__init__(parent, settings)
-        self.host = settings.get("host", "127.0.0.1")
-        self.port = settings.get("port", 5250)
-        self.osc_port = settings.get("osc_port", 6250)
-        self.heartbeat_interval = settings.get("heartbeat_interval", 10)
+
+        if not settings:
+            return
+
+        if (caspar_host := settings.get("host", None)) is None:
+            return
+
+        self.host = caspar_host
+
+        if caspar_port := settings.get("port", None):
+            self.port = caspar_port
+
+        if (osc_port := settings.get("osc_port", None)) is not None:
+            self.osc_port = osc_port
+
+        if (heartbeat_interval := settings.get("heartbeat_interval", None)) is not None:
+            self.heartbeat_interval = heartbeat_interval
 
         logger.info(f"Connecting to CasparCG server at {self.host}:{self.port}")
-        self.caspar = CasparCG(self.host, self.port, timeout=2)
-        self.caspar.verbose = settings.get("force")
+        self.caspar = CasparCG(caspar_host, self.port, timeout=2)
 
         _ = self.query("VERSION")
 
@@ -258,6 +276,8 @@ class CasparCGProvider(BaseProvider):
         return result
 
     def collect(self):
+        if not (self.host):
+            return
         tags = {}
         self.add("casparcg_connected", int(self.caspar.is_connected), **tags)
         self.add("casparcg_idle_seconds", time.time() - self.osc.last_message, **tags)
