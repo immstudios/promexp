@@ -246,10 +246,10 @@ class CasparCGProvider(BaseProvider):
         if not settings:
             return
 
-        if (caspar_host := settings.get("host", None)) is None:
+        if caspar_host := settings.get("host", None):
+            self.host = caspar_host
+        else:
             return
-
-        self.host = caspar_host
 
         if caspar_port := settings.get("port", None):
             self.port = caspar_port
