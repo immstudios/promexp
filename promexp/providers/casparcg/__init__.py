@@ -107,10 +107,8 @@ class CasparCG:
 
         try:
             self.connection.sendall(query_bytes)
+            assert self.rfile is not None
             status_line = self.rfile.readline()
-            if not status_line:
-                raise ConnectionResetError("Connection closed by peer")
-            result = status_line.strip()
         except ConnectionResetError:
             self.disconnect()
             return CasparResponse(500, "Connection reset by peer")
@@ -118,6 +116,10 @@ class CasparCG:
             log_traceback("Query failed")
             self.disconnect()
             return CasparResponse(500, "Query failed")
+
+        if not status_line:
+            raise ConnectionResetError("Connection closed by peer")
+        result = status_line.strip()
 
         result_str = result.decode("utf-8")
 
@@ -133,7 +135,7 @@ class CasparCG:
                 stat = int(code_str)
                 data_line = self.rfile.readline()
                 if not data_line:
-                    raise ConnectionResetError("Connection closed while reading data")
+                    raise ConnectionResetError("Connection closed while reading data")  # noqa: TRY301
                 data_str = data_line.decode("utf-8").strip()
                 return CasparResponse(stat, data_str)
 

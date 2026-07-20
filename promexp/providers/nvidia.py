@@ -48,7 +48,7 @@ class NVIDIAProvider(BaseProvider):
 
     def collect(self):
         try:
-            rawdata = subprocess.check_output([self.smi_path, "-q", "-x"])
+            rawdata = subprocess.check_output([self.smi_path, "-q", "-x"])  # noqa: S603
         except Exception:
             logger.exception("Unable to execute nvidia-smi")
             return

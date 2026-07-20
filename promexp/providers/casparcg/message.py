@@ -33,7 +33,7 @@ class OSCMessage:
         self._parameters = []
         self._parse_datagram()
 
-    def _parse_datagram(self) -> None:
+    def _parse_datagram(self) -> None:  # noqa: C901, PLR0912
         self._address_regexp, index = get_string(self._dgram, 0)
         if not self._dgram[index:]:
             # No params is legit, just return now.

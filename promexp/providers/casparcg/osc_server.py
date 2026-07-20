@@ -27,5 +27,6 @@ class OSCServer(socketserver.UDPServer):
     def verify_request(
         self, request: list[bytes], client_address: tuple[str, int]
     ) -> bool:
+        _ = client_address
         data = request[0]
         return data.startswith((_BUNDLE_PREFIX, b"/"))
