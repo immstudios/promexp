@@ -58,8 +58,6 @@ ignore = [
 ]
 
 [tool.mypy]
-plugins = ["pydantic.mypy"]
-
 strict = true
 follow_imports = "silent"
 warn_redundant_casts = true

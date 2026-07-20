@@ -23,7 +23,7 @@ class PSUtilProvider(BaseProvider):
         self.boot_time = psutil.boot_time()
         self.run_time = time.time()
 
-    def collect(self):
+    def collect(self) -> None:
         cpu = psutil.cpu_percent()
         mem = psutil.virtual_memory()
         try:
