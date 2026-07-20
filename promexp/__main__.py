@@ -110,7 +110,7 @@ app = typer.Typer(
 
 
 @app.command()
-def main(
+def main(  # noqa: C901, PLR0912, PLR0913
     version: Annotated[
         bool,
         typer.Option(
