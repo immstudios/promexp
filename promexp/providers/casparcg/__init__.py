@@ -1,10 +1,12 @@
 import fractions
+import math
 import socket
 import threading
 import time
 from typing import Any
 
 from promexp.logger import log_traceback, logger
+from promexp.metrics import Metric
 from promexp.provider import BaseProvider
 
 from .osc_server import OSCServer
@@ -148,6 +150,16 @@ class CasparCG:
         return CasparResponse(500, f"Unexpected result: {result_str}")
 
 
+SILENCE_DBFS = -100.0
+
+
+def to_dbfs(percent: float) -> float:
+    """Convert a linear peak in percent of full scale to decibels"""
+    if percent <= 0:
+        return SILENCE_DBFS
+    return max(round(20 * math.log10(percent / 100), 2), SILENCE_DBFS)
+
+
 class CasparChannel:
     def __init__(self) -> None:
         self.fps = fractions.Fraction(25, 1)
@@ -171,13 +183,13 @@ class CasparChannel:
 
     @property
     def peak_volume(self):
+        """Peak volume since the last read, in percent of full scale.
+
+        Reading the value resets the peak.
+        """
         v = self._volume
         self._volume = 0
         return v
-
-    @property
-    def dropped_frames(self):
-        return 0
 
 
 class CasparOSCServer:
@@ -237,6 +249,29 @@ class CasparCGHeartbeat(threading.Thread):
 class CasparCGProvider(BaseProvider):
     name = "casparcg"
 
+    exported_metrics = [
+        Metric(
+            "casparcg_connected",
+            "gauge",
+            "1 when the AMCP connection to the server is established",
+        ),
+        Metric(
+            "casparcg_idle_seconds",
+            "gauge",
+            "Time elapsed since the last OSC message",
+        ),
+        Metric(
+            "casparcg_peak_volume_percent",
+            "gauge",
+            "Audio peak since the last scrape, in percent of full scale",
+        ),
+        Metric(
+            "casparcg_peak_dbfs",
+            "gauge",
+            "Audio peak since the last scrape, in decibels relative to full scale",
+        ),
+    ]
+
     host: str | None = None
     port: int = 5250
     osc_port: int = 6250
@@ -289,5 +324,7 @@ class CasparCGProvider(BaseProvider):
 
         for id_channel, channel in self.osc.channels.items():
             tags = {"channel": id_channel}
-            self.add("casparcg_peak_volume", channel.peak_volume, **tags)
-            self.add("casparcg_dropped_total", channel.dropped_frames, **tags)
+            # Reading the peak resets it, so both metrics share one sample
+            peak = channel.peak_volume
+            self.add("casparcg_peak_volume_percent", peak, **tags)
+            self.add("casparcg_peak_dbfs", to_dbfs(peak), **tags)

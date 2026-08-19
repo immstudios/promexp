@@ -1,11 +1,14 @@
 from typing import TYPE_CHECKING, Any
 
+from promexp.metrics import Metric
+
 if TYPE_CHECKING:
     from promexp.promexp import Promexp
 
 
 class BaseProvider:
     name = "base"
+    exported_metrics: list[Metric] = []
 
     def __init__(
         self,
@@ -15,6 +18,13 @@ class BaseProvider:
         self.parent = parent
         self.enabled = settings is not None
         self.settings = settings or {}
+
+        # Directory the host root filesystem is mounted to. Empty unless
+        # promexp runs in a container. See Promexp.host_root
+        self.host_root = str(self.settings.get("host_root") or "").rstrip("/")
+
+        for metric in self.exported_metrics:
+            parent.metrics.describe(metric)
 
     def __getitem__(self, key: str) -> Any:
         return self.settings.get(key, None)

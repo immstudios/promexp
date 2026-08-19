@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 from xml.etree import ElementTree as ET
 
 from promexp.logger import logger
+from promexp.metrics import Metric
 from promexp.provider import BaseProvider
 
 if TYPE_CHECKING:
@@ -21,6 +22,24 @@ def parse_number(string):
 
 class NVIDIAProvider(BaseProvider):
     name = "nvidia"
+
+    exported_metrics = [
+        Metric("gpu_usage_percent", "gauge", "Utilization of the GPU core"),
+        Metric("gpu_memory_usage_percent", "gauge", "Utilization of the GPU memory"),
+        Metric(
+            "gpu_encoder_usage_percent",
+            "gauge",
+            "Utilization of the nvenc video encoder",
+        ),
+        Metric(
+            "gpu_decoder_usage_percent",
+            "gauge",
+            "Utilization of the nvdec video decoder",
+        ),
+        Metric("gpu_fan_speed_percent", "gauge", "Fan speed"),
+        Metric("gpu_temperature_celsius", "gauge", "Temperature of the GPU core"),
+        Metric("gpu_power_watts", "gauge", "Current power consumption"),
+    ]
 
     def __init__(
         self,
@@ -68,27 +87,35 @@ class NVIDIAProvider(BaseProvider):
             power = gpu.find("power_readings")
 
             self.add(
-                "gpu_usage", parse_number(utilization.find("gpu_util").text), **tags
+                "gpu_usage_percent",
+                parse_number(utilization.find("gpu_util").text),
+                **tags,
             )
             self.add(
-                "gpu_memory", parse_number(utilization.find("memory_util").text), **tags
+                "gpu_memory_usage_percent",
+                parse_number(utilization.find("memory_util").text),
+                **tags,
             )
             self.add(
-                "gpu_encoder",
+                "gpu_encoder_usage_percent",
                 parse_number(utilization.find("encoder_util").text),
                 **tags,
             )
             self.add(
-                "gpu_decoder",
+                "gpu_decoder_usage_percent",
                 parse_number(utilization.find("decoder_util").text),
                 **tags,
             )
-            self.add("gpu_fan_speed", parse_number(gpu.find("fan_speed").text), **tags)
             self.add(
-                "gpu_temperature",
+                "gpu_fan_speed_percent",
+                parse_number(gpu.find("fan_speed").text),
+                **tags,
+            )
+            self.add(
+                "gpu_temperature_celsius",
                 parse_number(temperature.find("gpu_temp").text),
                 **tags,
             )
             self.add(
-                "gpu_power_draw", parse_number(power.find("power_draw").text), **tags
+                "gpu_power_watts", parse_number(power.find("power_draw").text), **tags
             )
