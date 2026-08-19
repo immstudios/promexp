@@ -86,7 +86,6 @@ class OSCMessage:
         if len(param_stack) != 1:
             raise OSCParseError(f"Missing closing bracket in type tag: {type_tag}")
         self._parameters = params
-        raise OSCParseError("Found incorrect datagram, ignoring it")
 
     @property
     def address(self) -> str:
