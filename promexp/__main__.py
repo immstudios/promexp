@@ -24,6 +24,23 @@ def str_to_bool(value: Any) -> bool:
     return bool(value)
 
 
+def get_hostname(host_root: str | None) -> str:
+    """Return the name of the machine promexp reports about.
+
+    In a container, socket.gethostname() returns the container ID, which
+    changes whenever the container is recreated, so the hostname of the
+    monitored machine is read from the host root when available.
+    """
+    if host_root:
+        try:
+            with open(f"{host_root}/etc/hostname") as f:
+                if name := f.read().strip().splitlines()[0]:
+                    return name
+        except (OSError, IndexError):
+            logger.warning(f"Unable to read {host_root}/etc/hostname")
+    return socket.gethostname()
+
+
 def parse_list_option(val: str) -> list[str]:
     if not val:
         return []
@@ -195,6 +212,14 @@ def main(  # noqa: C901, PLR0912, PLR0913
             envvar="PROMEXP_STORAGES",
         ),
     ] = None,
+    host_root: Annotated[
+        str | None,
+        typer.Option(
+            help="Directory the host root filesystem is mounted to "
+            "(when running in a container)",
+            envvar="PROMEXP_HOST_ROOT",
+        ),
+    ] = None,
     network_interfaces: Annotated[
         str | None,
         typer.Option(
@@ -267,7 +292,7 @@ def main(  # noqa: C901, PLR0912, PLR0913
 
     # Storage specific
 
-    storage_settings = {}
+    storage_settings: dict[str, Any] = {}
     if storages:
         storage_settings["storages"] = parse_list_option(storages)
     prov_settings["storage"] = storage_settings
@@ -280,10 +305,13 @@ def main(  # noqa: C901, PLR0912, PLR0913
 
     # Apply hostname to tags
 
-    if hostname is None:
-        tags["hostname"] = socket.gethostname()
-    elif hostname:
-        tags["hostname"] = str(hostname)
+    # --hostname may be a boolean (autodetect / do not tag at all)
+    # or the name to be used instead of the autodetected one.
+
+    if hostname is None or hostname.lower() in ("true", "1", "yes", "on"):
+        tags["hostname"] = get_hostname(host_root)
+    elif hostname.lower() not in ("false", "0", "no", "off"):
+        tags["hostname"] = hostname
 
     #
     # Initialize promexp
@@ -293,6 +321,7 @@ def main(  # noqa: C901, PLR0912, PLR0913
         prefix=prefix,
         tags=tags,
         provider_settings=prov_settings,
+        host_root=host_root or "",
     )
 
     # Set promexp on MetricsHandler class
