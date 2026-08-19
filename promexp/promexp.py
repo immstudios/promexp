@@ -11,6 +11,7 @@ class Promexp:
         prefix: str = "",
         tags: dict[str, Any] | None = None,
         provider_settings: dict[str, Any] | None = None,
+        host_root: str = "",
     ):
         if provider_settings is None:
             provider_settings = {}
@@ -21,8 +22,17 @@ class Promexp:
         self.tags = tags
         self.providers = {}
         self.metrics = Metrics()
+
+        # When promexp runs in a container, host_root is the directory the
+        # host filesystems are bind mounted to. Providers use it to report
+        # the host state instead of the container state.
+        self.host_root = host_root.rstrip("/")
+
         for pclass in registry:
-            self.add_provider(pclass, provider_settings.get(pclass.name, {}))
+            psettings = provider_settings.get(pclass.name, {})
+            if self.host_root:
+                psettings = {"host_root": self.host_root, **psettings}
+            self.add_provider(pclass, psettings)
 
     def add_provider(self, pclass, psettings=None):
         if psettings is None:
