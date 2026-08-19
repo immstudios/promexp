@@ -1,4 +1,7 @@
+__all__ = ["FrozenDict", "Metric", "Metrics"]
+
 import collections.abc
+from typing import Any, NamedTuple
 
 
 class FrozenDict(collections.abc.Mapping):
@@ -38,9 +41,34 @@ class FrozenDict(collections.abc.Mapping):
         return self._hash
 
 
+class Metric(NamedTuple):
+    """Description of a metric exported by a provider.
+
+    Metric names follow the Prometheus naming conventions: a base unit
+    suffix (`_bytes`, `_seconds`, `_celsius`, ...) and, for counters,
+    a `_total` suffix after it.
+    """
+
+    name: str
+    type: str = "gauge"
+    description: str = ""
+
+
+def escape(value: str, quotes: bool = False) -> str:
+    result = value.replace("\\", "\\\\").replace("\n", "\\n")
+    if quotes:
+        result = result.replace('"', '\\"')
+    return result
+
+
 class Metrics:
     def __init__(self):
         self.data = {}
+        self.descriptions: dict[str, Metric] = {}
+
+    def describe(self, metric: Metric) -> None:
+        """Store the type and the description of a metric"""
+        self.descriptions[metric.name] = metric
 
     def add(self, metric_name: str, value: float, **tags) -> bool:
         """Add a metric to the pool"""
@@ -63,11 +91,28 @@ class Metrics:
         """Returns metrics in Prometheus format"""
         if prefix:
             prefix += "_"
+
+        # Samples of one metric must be grouped together and preceded
+        # by the HELP and TYPE comments of the metric.
+
+        families: dict[str, list[tuple[dict[str, Any], float]]] = {}
+        for (name, tags), value in self.data.items():
+            families.setdefault(name, []).append((tags.dict(), value))
+
         result = ""
-        for key, value in self.data.items():
-            name, tags = key
-            tstring = ", ".join(
-                f'{k}="{v}"' for k, v in {**tags.dict(), **kwargs}.items()
-            )
-            result += f"{prefix}{name}{{{tstring}}} {value}\n"
+        for name, samples in families.items():
+            metric = self.descriptions.get(name)
+            if metric is not None:
+                if metric.description:
+                    result += f"# HELP {prefix}{name} {escape(metric.description)}\n"
+                result += f"# TYPE {prefix}{name} {metric.type}\n"
+
+            for tags, value in samples:
+                tstring = ",".join(
+                    f'{k}="{escape(str(v), quotes=True)}"'
+                    for k, v in {**tags, **kwargs}.items()
+                )
+                if tstring:
+                    tstring = f"{{{tstring}}}"
+                result += f"{prefix}{name}{tstring} {value}\n"
         return result
