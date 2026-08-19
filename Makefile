@@ -14,7 +14,8 @@ build-dev:
 run: build-dev
 	docker run -it --rm \
 		-p 9731:9731 \
-		-v ./settings.json:/app/settings.json \
+		-v /:/host:ro,rslave \
+		-e PROMEXP_HOST_ROOT=/host \
 		$(IMAGE_NAME):dev
 
 dev: build-dev
